@@ -38,16 +38,19 @@ struct MainView: View {
             VStack(spacing: 0) {
                 statusBar
 
-                VStack(spacing: Layout.panelGap) {
+                VStack(spacing: 0) {
                     personPanel
+                    Spacer(minLength: Layout.panelGap)
                     tradeRow
+                    Spacer(minLength: Layout.panelGap)
                     marketSwitchBar
+                    Spacer(minLength: Layout.panelGap)
                     actionPanel
                 }
                 .padding(.horizontal, Layout.hPad)
                 .padding(.top, 14)
                 .padding(.bottom, 12)
-                .frame(maxHeight: .infinity, alignment: .top)
+                .frame(maxHeight: .infinity)
 
                 bottomBar
             }
