@@ -1,9 +1,9 @@
 import Foundation
 
-/// 全部数值表，直接对应 cargo.py / weather.py / data.py
+/// 全部数值表
 enum GameData {
 
-    // MARK: - 全局参数（data.py Person 类属性）
+    // MARK: - 全局参数
     static let cashInterest = 0.01
     static let alimoneyInterest = 0.05
     static let startMoney = 3000
@@ -25,7 +25,7 @@ enum GameData {
     /// 出租屋最多存放 5 种货
     static let roomSlots = 5
 
-    // MARK: - 货物（cargo.py）
+    // MARK: - 货物
     struct CargoDef {
         let code: String
         let name: String
@@ -53,7 +53,7 @@ enum GameData {
         cargo(code)?.name ?? ""
     }
 
-    // MARK: - 房屋（data.py buildings）
+    // MARK: - 房屋
     struct BuildingDef {
         let name: String
         let area: Int
@@ -72,7 +72,7 @@ enum GameData {
         .init(name: "一个楼盘", area: 24192, priceWan: 4000, asset: "house_estate"),
     ]
 
-    // MARK: - 成就（data.py archives）
+    // MARK: - 成就
     struct AchievementDef: Identifiable {
         let code: String
         let desc: String
@@ -97,7 +97,7 @@ enum GameData {
         achievements.first { $0.code == code }?.desc ?? ""
     }
 
-    // MARK: - 天气转移（weather.py）
+    // MARK: - 天气转移
     struct WeatherDef {
         let name: String
         let next: [(String, Int)]
@@ -149,4 +149,5 @@ enum GameData {
         weatherAssets[name] ?? "weather_sunny"
     }
 }
+
 

@@ -620,7 +620,7 @@ struct AboutDialog: View {
         PixelPanel(title: "关于") {
             VStack(spacing: 8) {
                 Text("买房记").font(Theme.pixel(24)).foregroundColor(Theme.ink)
-                Text("v1.3 · iOS 移植版")
+                Text("v1.0.0")
                     .font(Theme.pixel(12))
                     .foregroundColor(Theme.sub)
                 Text("原作：绫里千寻")
@@ -633,3 +633,4 @@ struct AboutDialog: View {
         }
     }
 }
+

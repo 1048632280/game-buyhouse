@@ -15,6 +15,9 @@ concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
@@ -54,15 +57,28 @@ jobs:
 
       - name: Package unsigned IPA
         run: |
+          VERSION=$(sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' ios/project.yml | head -1)
+          NAME="BuyHouse-${VERSION}-unsigned.ipa"
           mkdir -p Payload
           cp -R ios/build/Build/Products/Release-iphoneos/BuyHouse.app Payload/
-          zip -qry BuyHouse.ipa Payload
-          ls -lh BuyHouse.ipa
+          zip -qry "$NAME" Payload
+          ls -lh "$NAME"
+          echo "IPA_NAME=$NAME" >> "$GITHUB_ENV"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: BuyHouse-unsigned-ipa
-          path: BuyHouse.ipa
+          path: BuyHouse-*-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG" "$IPA_NAME" \
+            --title "买房记 $TAG" \
+            --notes-file .github/release-notes.md

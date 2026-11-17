@@ -1,8 +1,3 @@
-__pycache__
-build
-
-buyhouse.data
-
 # 素材原始包与中间产物（体积大，可用 art/_work 下的脚本重新下载）
 art/_work/*
 !art/_work/*.py
@@ -16,5 +11,4 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 
-# 仓库树缓存（脚本可重新拉取）
-art/_work/kenney_tree.json
+.DS_Store
