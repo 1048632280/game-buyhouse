@@ -1,29 +1,42 @@
 import UIKit
 
-/// 自适应布局常量：按屏幕宽度收敛间距与控件尺寸
+/// 自适应布局常量：按屏幕宽度收敛间距，按屏幕高度切换紧凑模式
 enum Layout {
-    static var screenWidth: CGFloat {
+    static var screenSize: CGSize {
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        return scenes.first?.screen.bounds.width ?? UIScreen.main.bounds.width
+        return scenes.first?.screen.bounds.size ?? UIScreen.main.bounds.size
     }
 
+    static var screenWidth: CGFloat { screenSize.width }
+    static var screenHeight: CGFloat { screenSize.height }
+
+    /// 窄屏（SE 一代、mini 竖屏）
     static var isCompact: Bool { screenWidth < 360 }
+    /// 矮屏（SE 一代 568、8/SE2 667）
+    static var isShort: Bool { screenHeight < 700 }
 
     static var hPad: CGFloat { isCompact ? 8 : 10 }
 
     static var contentWidth: CGFloat { screenWidth - hPad * 2 }
 
+    /// 面板之间的竖向间距
+    static var panelGap: CGFloat { isShort ? 8 : 10 }
+
+    /// 四列按钮的列间距
     static var gridGap: CGFloat { isCompact ? 6 : 8 }
 
-    /// 4 列按钮的单元宽度
-    static var cell4: CGFloat { (contentWidth - 24 - gridGap * 3) / 4 }
+    /// 列表行高
+    static var rowHeight: CGFloat { isShort ? 36 : 42 }
+
+    /// 操作区按钮高度
+    static var actionHeight: CGFloat { isShort ? 32 : 40 }
+
+    /// 出租屋 / 市场两栏的最小高度：正好装下 5 行
+    static var tradeListHeight: CGFloat {
+        rowHeight * CGFloat(GameData.roomSlots) + CGFloat(GameData.roomSlots - 1) + 30
+    }
 
     static var statsLabelWidth: CGFloat { 46 }
 
     static var barWidth: CGFloat { isCompact ? 56 : 66 }
-
-    static var iconScale: CGFloat { isCompact ? 1.5 : 2 }
-
-    /// 出租屋 / 市场两栏固定高度：正好装下 5 行货
-    static var tradeHeight: CGFloat { 248 }
 }

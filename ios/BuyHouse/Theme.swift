@@ -64,10 +64,12 @@ struct PixelImage: View {
 
 struct PixelPanel<Content: View>: View {
     let title: String?
+    let minHeight: CGFloat?
     let content: Content
 
-    init(title: String? = nil, @ViewBuilder content: () -> Content) {
+    init(title: String? = nil, minHeight: CGFloat? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.minHeight = minHeight
         self.content = content()
     }
 
@@ -76,7 +78,7 @@ struct PixelPanel<Content: View>: View {
             .padding(.horizontal, 10)
             .padding(.top, title == nil ? 10 : 20)
             .padding(.bottom, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
             .background(Theme.paper)
             .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
             .overlay(

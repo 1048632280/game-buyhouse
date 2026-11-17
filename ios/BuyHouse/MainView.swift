@@ -38,7 +38,7 @@ struct MainView: View {
             VStack(spacing: 0) {
                 statusBar
 
-                VStack(spacing: 10) {
+                VStack(spacing: Layout.panelGap) {
                     personPanel
                     tradeRow
                     marketSwitchBar
@@ -196,20 +196,21 @@ struct MainView: View {
             if let event = store.pendingEvents.first {
                 NewspaperCard(event: event)
                     .frame(height: 196)
-                    .onTapGesture {
-                        withAnimation(.easeOut(duration: 0.16)) {
-                            store.dismissEvent()
-                        }
-                    }
             }
         }
         .padding(.horizontal, 6)
         .padding(.top, 6)
-        .frame(maxWidth: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeOut(duration: 0.16)) {
+                store.dismissEvent()
+            }
+        }
     }
 
     private var roomPanel: some View {
-        PixelPanel(title: "出租屋 \(store.state.cargoCur)/\(store.state.cargoMax)") {
+        PixelPanel(title: "出租屋 \(store.state.cargoCur)/\(store.state.cargoMax)", minHeight: Layout.tradeListHeight) {
             VStack(spacing: 0) {
                 if store.state.roomCargos.isEmpty {
                     EmptyState(text: "还没有存货")
@@ -236,7 +237,7 @@ struct MainView: View {
                                 .foregroundColor(Theme.ink)
                                 .lineLimit(1)
                         }
-                        .frame(height: 42)
+                        .frame(height: Layout.rowHeight)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -250,7 +251,7 @@ struct MainView: View {
     }
 
     private var marketPanel: some View {
-        PixelPanel(title: "市场") {
+        PixelPanel(title: "市场", minHeight: Layout.tradeListHeight) {
             VStack(spacing: 0) {
                 if store.currentMarket.isEmpty {
                     EmptyState(text: "休市")
@@ -273,7 +274,7 @@ struct MainView: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                         }
-                        .frame(height: 42)
+                        .frame(height: Layout.rowHeight)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -303,7 +304,7 @@ struct MainView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 34)
+                            .frame(height: Layout.isShort ? 30 : 34)
                             .background(active ? Theme.yellow : Theme.paper)
                             .overlay(Rectangle().stroke(Theme.ink, lineWidth: active ? 2 : 1))
                     }
@@ -320,14 +321,14 @@ struct MainView: View {
         PixelPanel(title: "操作") {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Layout.gridGap), count: 4),
                       spacing: Layout.gridGap) {
-                PixelButton(title: "医院", icon: "act_hospital", height: 40) { dialog = .hospital }
-                PixelButton(title: "健身房", icon: "act_gym", height: 40) { dialog = .sport }
-                PixelButton(title: "银行", icon: "act_bank", height: 40) { dialog = .bank }
-                PixelButton(title: "余X宝", icon: "act_alipay", height: 40) { dialog = .alipay }
-                PixelButton(title: "中介", icon: "act_agent", height: 40) { dialog = .agency }
-                PixelButton(title: "彩票", icon: "act_lottery", height: 40) { dialog = .lottery }
-                PixelButton(title: "售楼部", icon: "act_sales", height: 40) { page = .sale }
-                PixelButton(title: "关于", icon: "act_about", height: 40) { dialog = .about }
+                PixelButton(title: "医院", icon: "act_hospital", height: Layout.actionHeight) { dialog = .hospital }
+                PixelButton(title: "健身房", icon: "act_gym", height: Layout.actionHeight) { dialog = .sport }
+                PixelButton(title: "银行", icon: "act_bank", height: Layout.actionHeight) { dialog = .bank }
+                PixelButton(title: "余X宝", icon: "act_alipay", height: Layout.actionHeight) { dialog = .alipay }
+                PixelButton(title: "中介", icon: "act_agent", height: Layout.actionHeight) { dialog = .agency }
+                PixelButton(title: "彩票", icon: "act_lottery", height: Layout.actionHeight) { dialog = .lottery }
+                PixelButton(title: "售楼部", icon: "act_sales", height: Layout.actionHeight) { page = .sale }
+                PixelButton(title: "关于", icon: "act_about", height: Layout.actionHeight) { dialog = .about }
             }
         }
     }
@@ -338,14 +339,14 @@ struct MainView: View {
         VStack(spacing: 0) {
             Rectangle().fill(Theme.ink.opacity(0.25)).frame(height: 1)
             HStack(spacing: 8) {
-                PixelButton(title: "房产 \(store.state.buildingHouse.count)", height: 44) {
+                PixelButton(title: "房产 \(store.state.buildingHouse.count)", height: Layout.isShort ? 40 : 44) {
                     page = .houses
                 }
-                PixelButton(title: "结束游戏", height: 44) {
+                PixelButton(title: "结束游戏", height: Layout.isShort ? 40 : 44) {
                     _ = store.finishRun()
                     page = .settlement
                 }
-                PixelButton(title: "里程碑 \(progress.totalMilestones)", height: 44) {
+                PixelButton(title: "里程碑 \(progress.totalMilestones)", height: Layout.isShort ? 40 : 44) {
                     page = .milestones
                 }
             }
@@ -429,7 +430,7 @@ struct MainView: View {
         VStack {
             Spacer()
             PixelPanel(title: "成就解锁") {
-                VStack(spacing: 10) {
+                VStack(spacing: Layout.panelGap) {
                     Text(text)
                         .font(Theme.pixel(12))
                         .foregroundColor(Theme.ink)
@@ -489,3 +490,4 @@ struct MainView: View {
         }
     }
 }
+
