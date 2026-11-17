@@ -1,0 +1,4 @@
+[
+  { "url": "https://github.com/TakWolf/ark-pixel-font/releases/download/2026.05.07/ark-pixel-font-16px-monospaced-ttf-v2026.05.07.zip", "dest": "raw/font/ark16-may.zip" },
+  { "url": "https://github.com/SolidZORO/zpix-pixel-font/releases/download/v3.3.0/zpix.ttf", "dest": "raw/font/zpix.ttf" }
+]

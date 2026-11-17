@@ -1,0 +1,4 @@
+[
+  { "url": "https://raw.githubusercontent.com/ACh-K/Cubic-11/main/fonts/ttf/Cubic_11.ttf", "dest": "raw/font/cubic11.ttf" },
+  { "url": "https://raw.githubusercontent.com/ACh-K/Cubic-11/main/LICENSE", "dest": "raw/font/cubic11-LICENSE.txt" }
+]

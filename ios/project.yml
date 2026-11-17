@@ -1,0 +1,31 @@
+name: BuyHouse
+options:
+  bundleIdPrefix: com.lingliqianxun
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.3"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+targets:
+  BuyHouse:
+    type: application
+    platform: iOS
+    sources:
+      - path: BuyHouse
+        excludes:
+          - "Resources/png/**"
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lingliqianxun.buyhouse
+        INFOPLIST_FILE: BuyHouse/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"

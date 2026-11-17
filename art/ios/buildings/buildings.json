@@ -1,0 +1,82 @@
+[
+ {
+  "code": "studio",
+  "name": "单身公寓",
+  "file": "studio.png",
+  "size": [
+   60,
+   72
+  ],
+  "source": "07-02-flat-fronted-town-house"
+ },
+ {
+  "code": "oldhouse",
+  "name": "二手旧房",
+  "file": "oldhouse.png",
+  "size": [
+   86,
+   117
+  ],
+  "source": "07-14-crooked-house-over-an-archway"
+ },
+ {
+  "code": "uptown",
+  "name": "高档小区",
+  "file": "uptown.png",
+  "size": [
+   82,
+   103
+  ],
+  "source": "09-01-brick-block"
+ },
+ {
+  "code": "luxury",
+  "name": "豪华住宅",
+  "file": "luxury.png",
+  "size": [
+   82,
+   117
+  ],
+  "source": "09-00-mansard-block"
+ },
+ {
+  "code": "lakevilla",
+  "name": "湖景别墅",
+  "file": "lakevilla.png",
+  "size": [
+   86,
+   105
+  ],
+  "source": "07-05-canal-house"
+ },
+ {
+  "code": "poolvilla",
+  "name": "泳池私宅",
+  "file": "poolvilla.png",
+  "size": [
+   114,
+   140
+  ],
+  "source": "09-15-hanging-garden-block"
+ },
+ {
+  "code": "complex",
+  "name": "一栋小区",
+  "file": "complex.png",
+  "size": [
+   134,
+   130
+  ],
+  "source": "09-04-courtyard-block-in-a-u"
+ },
+ {
+  "code": "estate",
+  "name": "一个楼盘",
+  "file": "estate.png",
+  "size": [
+   130,
+   169
+  ],
+  "source": "09-08-twin-towers-joined-by-a-bridge"
+ }
+]

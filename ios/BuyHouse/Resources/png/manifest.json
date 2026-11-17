@@ -1,0 +1,296 @@
+[
+ {
+  "name": "item_beans",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "item_mask",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "item_milk",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "item_gold",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "item_phone",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "item_computer",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "item_moterbike",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "item_car",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_sunny",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_partly_cloudy",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_overcast",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_fog",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_light_rain",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_moderate_rain",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_heavy_rain",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_rainstorm",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_thunderstorm",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_sleet",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_light_snow",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_moderate_snow",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_heavy_snow",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "weather_blizzard",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "star",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "ui_panel",
+  "size": [
+   24,
+   24
+  ]
+ },
+ {
+  "name": "ui_button",
+  "size": [
+   24,
+   24
+  ]
+ },
+ {
+  "name": "ui_button_pressed",
+  "size": [
+   24,
+   24
+  ]
+ },
+ {
+  "name": "act_hospital",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "act_gym",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "act_bank",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "act_alipay",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "act_agent",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "act_lottery",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "act_sales",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "act_about",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
+  "name": "house_studio",
+  "size": [
+   60,
+   72
+  ]
+ },
+ {
+  "name": "house_oldhouse",
+  "size": [
+   86,
+   117
+  ]
+ },
+ {
+  "name": "house_uptown",
+  "size": [
+   82,
+   103
+  ]
+ },
+ {
+  "name": "house_luxury",
+  "size": [
+   82,
+   117
+  ]
+ },
+ {
+  "name": "house_lakevilla",
+  "size": [
+   86,
+   105
+  ]
+ },
+ {
+  "name": "house_poolvilla",
+  "size": [
+   114,
+   140
+  ]
+ },
+ {
+  "name": "house_complex",
+  "size": [
+   134,
+   130
+  ]
+ },
+ {
+  "name": "house_estate",
+  "size": [
+   130,
+   169
+  ]
+ }
+]

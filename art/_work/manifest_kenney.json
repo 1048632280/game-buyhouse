@@ -1,0 +1,13 @@
+[
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/roguelike-modern-city-pack/Preview.png", "dest": "raw/kenney/city/Preview.png" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/roguelike-modern-city-pack/Sample.png", "dest": "raw/kenney/city/Sample.png" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/roguelike-modern-city-pack/License.txt", "dest": "raw/kenney/city/License.txt" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/roguelike-modern-city-pack/Spritesheet/roguelikeCity_transparent.png", "dest": "raw/kenney/city/roguelikeCity_transparent.png" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/roguelike-modern-city-pack/Spritesheet/spritesheetInfo.txt", "dest": "raw/kenney/city/spritesheetInfo.txt" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/pixeluipack/Preview.png", "dest": "raw/kenney/ui/Preview.png" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/pixeluipack/License.txt", "dest": "raw/kenney/ui/License.txt" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/pixeluipack/Spritesheet/UIpackSheet_transparent.png", "dest": "raw/kenney/ui/UIpackSheet_transparent.png" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/pixelcarpack_kenney/License.txt", "dest": "raw/kenney/cars/License.txt" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/pixelcarpack_kenney/PNG/Cars/cycle.png", "dest": "raw/kenney/cars/cycle.png" },
+  { "url": "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/pixelcarpack_kenney/PNG/Cars/sedan.png", "dest": "raw/kenney/cars/sedan.png" }
+]
