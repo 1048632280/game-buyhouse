@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 通用页头
+// MARK: - 页面通用页头
 
 struct SheetHeader: View {
     let title: String
@@ -26,185 +26,6 @@ struct SheetHeader: View {
     }
 }
 
-// MARK: - 弹窗卡片容器
-
-struct DialogCard<Content: View>: View {
-    let title: String
-    let content: Content
-
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-
-    var body: some View {
-        ZStack {
-            Theme.bg.ignoresSafeArea()
-            PixelPanel(title: title) {
-                content
-                    .frame(maxWidth: .infinity)
-            }
-            .frame(maxWidth: 330)
-            .padding(.horizontal, 24)
-        }
-        .preferredColorScheme(.light)
-    }
-}
-
-// MARK: - 确认框
-
-struct ConfirmDialog: View {
-    @ObservedObject var store: GameStore
-    let title: String
-    let message: String
-    let onConfirm: () -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var result: String?
-
-    var body: some View {
-        DialogCard(title: title) {
-            VStack(spacing: 14) {
-                Text(result ?? message)
-                    .font(Theme.pixel(12))
-                    .foregroundColor(result == nil ? Theme.sub : Theme.ink)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-
-                if result == nil {
-                    HStack(spacing: 8) {
-                        PixelButton(title: "取消") { dismiss() }
-                        PixelButton(title: "确定", primary: true) {
-                            onConfirm()
-                            result = store.alert
-                            store.alert = nil
-                        }
-                    }
-                } else {
-                    PixelButton(title: "关闭", primary: true) { dismiss() }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - 数字输入框
-
-struct NumberDialog: View {
-    let title: String
-    let prompt: String
-    let inLabel: String
-    let outLabel: String?
-    var defaultValue: Int = 0
-    let onIn: (Int) -> Bool
-    let onOut: (Int) -> Bool
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-
-    var body: some View {
-        DialogCard(title: title) {
-            VStack(spacing: 12) {
-                Text(prompt)
-                    .font(Theme.pixel(12))
-                    .foregroundColor(Theme.sub)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-
-                TextField("0", text: $text)
-                    .keyboardType(.numberPad)
-                    .font(Theme.pixel(24))
-                    .multilineTextAlignment(.center)
-                    .padding(8)
-                    .background(Theme.paper)
-                    .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
-
-                HStack(spacing: 8) {
-                    if let outLabel {
-                        PixelButton(title: outLabel) {
-                            if onOut(Int(text) ?? 0) { dismiss() }
-                        }
-                    }
-                    PixelButton(title: inLabel, primary: true) {
-                        if onIn(Int(text) ?? 0) { dismiss() }
-                    }
-                }
-                PixelButton(title: "取消") { dismiss() }
-            }
-        }
-        .onAppear {
-            if text.isEmpty, defaultValue > 0 {
-                text = String(defaultValue)
-            }
-        }
-    }
-}
-
-// MARK: - 彩票
-
-struct LotteryView: View {
-    @ObservedObject var store: GameStore
-    @Environment(\.dismiss) private var dismiss
-    @State private var amount = ""
-    @State private var kind: LotteryKind = .six
-
-    var body: some View {
-        DialogCard(title: "时时彩票") {
-            VStack(spacing: 12) {
-                Text("随机 1~10 号，猜中直返倍率")
-                    .font(Theme.pixel(12))
-                    .foregroundColor(Theme.sub)
-
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-                    ForEach(LotteryKind.allCases) { k in
-                        Button {
-                            kind = k
-                        } label: {
-                            Text(k.title)
-                                .font(Theme.pixel(12))
-                                .foregroundColor(Theme.ink)
-                                .frame(maxWidth: .infinity, minHeight: 30)
-                                .background(kind == k ? Theme.yellow : Theme.paper)
-                                .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                TextField("押注数（元）", text: $amount)
-                    .keyboardType(.numberPad)
-                    .font(Theme.pixel(12))
-                    .multilineTextAlignment(.center)
-                    .padding(8)
-                    .background(Theme.paper)
-                    .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
-
-                if let prize = store.lastLottery {
-                    Text("上期开彩结果：\(prize)")
-                        .font(Theme.pixel(12))
-                        .foregroundColor(Theme.sub)
-                }
-                if let msg = store.alert {
-                    Text(msg)
-                        .font(Theme.pixel(12))
-                        .foregroundColor(Theme.red)
-                        .multilineTextAlignment(.center)
-                }
-
-                HStack(spacing: 8) {
-                    PixelButton(title: "关闭") { dismiss() }
-                    PixelButton(title: "下注", primary: true) {
-                        if store.lotteryBet(amount: Int(amount) ?? 0, kind: kind) {
-                            amount = ""
-                            store.alert = nil
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // MARK: - 售楼部
 
 struct SaleOfficeView: View {
@@ -219,11 +40,10 @@ struct SaleOfficeView: View {
             Theme.bg.ignoresSafeArea()
             VStack(spacing: 0) {
                 SheetHeader(title: "售楼部") { dismiss() }
-
                 ScrollView(showsIndicators: false) {
                     LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(GameData.buildings, id: \.name) { b in
-                            buildingCard(b)
+                            card(b)
                         }
                     }
                     .padding(Layout.hPad)
@@ -234,7 +54,7 @@ struct SaleOfficeView: View {
         .storeAlert(store)
     }
 
-    private func buildingCard(_ b: GameData.BuildingDef) -> some View {
+    private func card(_ b: GameData.BuildingDef) -> some View {
         let owned = store.state.buildingHouse.contains(b.name)
         return PixelPanel {
             VStack(spacing: 6) {
@@ -290,18 +110,17 @@ struct SaleOfficeView: View {
     }
 }
 
-// MARK: - 成就
+// MARK: - 成就（全局永久）
 
-struct ArchiveView: View {
-    @ObservedObject var store: GameStore
+struct AchievementsView: View {
+    @ObservedObject var progress = Progress.shared
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
             VStack(spacing: 0) {
-                SheetHeader(title: "已获成就") { dismiss() }
-
+                SheetHeader(title: "成就 \(progress.unlockedCount)/\(GameData.achievements.count)") { dismiss() }
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 6) {
                         ForEach(GameData.achievements) { a in
@@ -316,7 +135,7 @@ struct ArchiveView: View {
     }
 
     private func row(_ a: GameData.AchievementDef) -> some View {
-        let got = store.state.archivePerson.contains(a.code)
+        let got = progress.isUnlocked(a.code)
         return HStack(spacing: 10) {
             Image("star")
                 .interpolation(.none)
@@ -333,7 +152,6 @@ struct ArchiveView: View {
             Text(got ? "已获得" : "未解锁")
                 .font(Theme.pixel(12))
                 .foregroundColor(got ? Theme.deepGreen : Theme.soft)
-                .lineLimit(1)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
@@ -342,24 +160,363 @@ struct ArchiveView: View {
     }
 }
 
-// MARK: - 关于
+// MARK: - 里程碑（全局计数）
 
-struct AboutView: View {
+struct MilestonesView: View {
+    @ObservedObject var progress = Progress.shared
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        DialogCard(title: "关于") {
-            VStack(spacing: 10) {
-                Text("买房记").font(Theme.pixel(24)).foregroundColor(Theme.ink)
-                Text("v1.3").font(Theme.pixel(12)).foregroundColor(Theme.sub)
-                Text("iOS 移植版 · 原作：绫里千寻")
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            VStack(spacing: 0) {
+                SheetHeader(title: "里程碑 · 累计 \(progress.totalMilestones)") { dismiss() }
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 6) {
+                        ForEach(GameData.buildings, id: \.name) { b in
+                            row(b)
+                        }
+                    }
+                    .padding(Layout.hPad)
+                }
+            }
+        }
+        .preferredColorScheme(.light)
+    }
+
+    private func row(_ b: GameData.BuildingDef) -> some View {
+        let count = progress.milestoneCount(b.name)
+        return HStack(spacing: 10) {
+            Image(b.asset)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 40, height: 40)
+                .opacity(count > 0 ? 1 : 0.3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(b.name)
                     .font(Theme.pixel(12))
-                    .foregroundColor(Theme.sub)
+                    .foregroundColor(count > 0 ? Theme.ink : Theme.sub)
+                Text("\(b.area)m²")
+                    .font(Theme.pixel(12))
+                    .foregroundColor(Theme.soft)
+            }
+            Spacer(minLength: 4)
+            Text("×\(count)")
+                .font(Theme.pixel(24))
+                .foregroundColor(count > 0 ? Theme.red : Theme.soft)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Theme.paper)
+        .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+    }
+}
+
+// MARK: - 房产（当前存档）
+
+struct HousesView: View {
+    @ObservedObject var store: GameStore
+    @Environment(\.dismiss) private var dismiss
+
+    private var owned: [GameData.BuildingDef] {
+        GameData.buildings.filter { store.state.buildingHouse.contains($0.name) }
+    }
+
+    var body: some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            VStack(spacing: 0) {
+                SheetHeader(title: "房产 \(owned.count)/\(GameData.buildings.count)") { dismiss() }
+                ScrollView(showsIndicators: false) {
+                    if owned.isEmpty {
+                        EmptyState(text: "还没有房产，去售楼部看看")
+                            .padding(Layout.hPad)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+                                  spacing: 8) {
+                            ForEach(owned, id: \.name) { b in
+                                PixelPanel {
+                                    VStack(spacing: 6) {
+                                        Image(b.asset)
+                                            .interpolation(.none)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(height: 110)
+                                        Text(b.name)
+                                            .font(Theme.pixel(12))
+                                            .foregroundColor(Theme.ink)
+                                        Text("\(b.area)m² · \(b.priceWan) 万")
+                                            .font(Theme.pixel(12))
+                                            .foregroundColor(Theme.sub)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                            }
+                        }
+                        .padding(Layout.hPad)
+                    }
+                }
+            }
+        }
+        .preferredColorScheme(.light)
+    }
+}
+
+// MARK: - 结算
+
+struct SettlementView: View {
+    @ObservedObject var store: GameStore
+    @Environment(\.dismiss) private var dismiss
+
+    private var data: Settlement {
+        store.settlement ?? Settlement(weeks: store.state.week,
+                                       achievements: store.satisfiedAchievements().count,
+                                       totalAchievements: GameData.achievements.count,
+                                       houses: store.state.buildingHouse.count,
+                                       netWorth: store.state.money + store.state.cash + store.state.alimoney,
+                                       milestoneTotal: Progress.shared.totalMilestones)
+    }
+
+    var body: some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            VStack(spacing: 0) {
+                SheetHeader(title: "结算") { dismiss() }
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 10) {
+                        PixelPanel(title: "本局") {
+                            VStack(spacing: 8) {
+                                row("生存", "\(data.weeks) 周")
+                                row("净资产", Money.text(data.netWorth))
+                                row("房产", "\(data.houses) 套")
+                                row("达成成就", "\(data.achievements)/\(data.totalAchievements)")
+                            }
+                        }
+                        PixelPanel(title: "累计（全部存档）") {
+                            VStack(spacing: 8) {
+                                row("已解锁成就", "\(Progress.shared.unlockedCount)/\(GameData.achievements.count)")
+                                row("房产购买次数", "\(data.milestoneTotal)")
+                            }
+                        }
+                        HStack(spacing: 8) {
+                            PixelButton(title: "返回") { dismiss() }
+                            PixelButton(title: "重新开始", primary: true) {
+                                store.restart()
+                                dismiss()
+                            }
+                        }
+                    }
+                    .padding(Layout.hPad)
+                }
+            }
+        }
+        .preferredColorScheme(.light)
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(Theme.pixel(12))
+                .foregroundColor(Theme.sub)
+            Spacer()
+            Text(value)
+                .font(Theme.pixel(12))
+                .foregroundColor(Theme.ink)
+        }
+    }
+}
+
+// MARK: - 小弹窗：确认
+
+struct ConfirmDialog: View {
+    @ObservedObject var store: GameStore
+    let title: String
+    let message: String
+    let onConfirm: () -> Void
+    let onClose: () -> Void
+
+    @State private var result: String?
+
+    var body: some View {
+        PixelPanel(title: title) {
+            VStack(spacing: 12) {
+                Text(result ?? message)
+                    .font(Theme.pixel(12))
+                    .foregroundColor(result == nil ? Theme.sub : Theme.ink)
                     .multilineTextAlignment(.center)
-                PixelButton(title: "返回") { dismiss() }
-                    .padding(.top, 4)
+                    .frame(maxWidth: .infinity)
+
+                if result == nil {
+                    HStack(spacing: 8) {
+                        PixelButton(title: "取消") { onClose() }
+                        PixelButton(title: "确定", primary: true) {
+                            onConfirm()
+                            result = store.alert
+                            store.alert = nil
+                        }
+                    }
+                } else {
+                    PixelButton(title: "关闭", primary: true) { onClose() }
+                }
             }
         }
     }
 }
 
+// MARK: - 小弹窗：数字输入
+
+struct NumberDialog: View {
+    @ObservedObject var store: GameStore
+    let title: String
+    let prompt: String
+    let inLabel: String
+    let outLabel: String?
+    var defaultValue: Int = 0
+    let onIn: (Int) -> Bool
+    let onOut: (Int) -> Bool
+    let onClose: () -> Void
+
+    @State private var text = ""
+    @State private var error: String?
+
+    var body: some View {
+        PixelPanel(title: title) {
+            VStack(spacing: 10) {
+                Text(prompt)
+                    .font(Theme.pixel(12))
+                    .foregroundColor(Theme.sub)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+
+                TextField("0", text: $text)
+                    .keyboardType(.numberPad)
+                    .font(Theme.pixel(24))
+                    .multilineTextAlignment(.center)
+                    .padding(6)
+                    .background(Theme.paper)
+                    .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+
+                if let error {
+                    Text(error)
+                        .font(Theme.pixel(12))
+                        .foregroundColor(Theme.red)
+                }
+
+                HStack(spacing: 8) {
+                    PixelButton(title: "取消") { onClose() }
+                    if let outLabel {
+                        PixelButton(title: outLabel) {
+                            if onOut(Int(text) ?? 0) { onClose() } else { fail() }
+                        }
+                    }
+                    PixelButton(title: inLabel, primary: true) {
+                        if onIn(Int(text) ?? 0) { onClose() } else { fail() }
+                    }
+                }
+            }
+        }
+        .onAppear {
+            if text.isEmpty, defaultValue > 0 {
+                text = String(defaultValue)
+            }
+        }
+    }
+
+    private func fail() {
+        error = store.alert
+        store.alert = nil
+    }
+}
+
+// MARK: - 小弹窗：彩票
+
+struct LotteryDialog: View {
+    @ObservedObject var store: GameStore
+    let onClose: () -> Void
+
+    @State private var amount = ""
+    @State private var kind: LotteryKind = .six
+    @State private var message: String?
+
+    var body: some View {
+        PixelPanel(title: "时时彩票") {
+            VStack(spacing: 10) {
+                Text("随机 1~10 号，猜中直返倍率")
+                    .font(Theme.pixel(12))
+                    .foregroundColor(Theme.sub)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 3), spacing: 5) {
+                    ForEach(LotteryKind.allCases) { k in
+                        Button {
+                            kind = k
+                        } label: {
+                            Text(k.title)
+                                .font(Theme.pixel(12))
+                                .foregroundColor(Theme.ink)
+                                .frame(maxWidth: .infinity, minHeight: 26)
+                                .background(kind == k ? Theme.yellow : Theme.paper)
+                                .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                TextField("押注数（元）", text: $amount)
+                    .keyboardType(.numberPad)
+                    .font(Theme.pixel(12))
+                    .multilineTextAlignment(.center)
+                    .padding(6)
+                    .background(Theme.paper)
+                    .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+
+                if let message {
+                    Text(message)
+                        .font(Theme.pixel(12))
+                        .foregroundColor(Theme.red)
+                        .multilineTextAlignment(.center)
+                }
+
+                HStack(spacing: 8) {
+                    PixelButton(title: "关闭") { onClose() }
+                    PixelButton(title: "下注", primary: true) {
+                        let ok = store.lotteryBet(amount: Int(amount) ?? 0, kind: kind)
+                        let result = store.alert
+                        store.alert = nil
+                        if ok {
+                            amount = ""
+                            if let prize = store.lastLottery {
+                                message = "开彩：\(prize) · \(result ?? "")"
+                            }
+                        } else {
+                            message = result
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 小弹窗：关于
+
+struct AboutDialog: View {
+    let onClose: () -> Void
+
+    var body: some View {
+        PixelPanel(title: "关于") {
+            VStack(spacing: 8) {
+                Text("买房记").font(Theme.pixel(24)).foregroundColor(Theme.ink)
+                Text("v1.3 · iOS 移植版")
+                    .font(Theme.pixel(12))
+                    .foregroundColor(Theme.sub)
+                Text("原作：绫里千寻")
+                    .font(Theme.pixel(12))
+                    .foregroundColor(Theme.sub)
+                PixelButton(title: "返回") { onClose() }
+                    .padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}

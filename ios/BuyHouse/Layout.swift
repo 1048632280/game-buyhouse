@@ -23,4 +23,7 @@ enum Layout {
     static var barWidth: CGFloat { isCompact ? 56 : 66 }
 
     static var iconScale: CGFloat { isCompact ? 1.5 : 2 }
+
+    /// 出租屋 / 市场两栏的最小高度，保证左右等高的观感
+    static var tradeMinHeight: CGFloat { isCompact ? 262 : 280 }
 }

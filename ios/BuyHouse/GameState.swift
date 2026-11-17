@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - 存档结构（对应 buyhouse.data 的字段）
+// MARK: - 存档结构
 
 struct RoomCargo: Codable, Identifiable, Equatable {
     var code: String
@@ -15,7 +15,7 @@ struct MarketCargo: Codable, Identifiable, Equatable {
     var id: String { code }
 }
 
-struct SaveData: Codable, Equatable {
+struct SaveData: Codable {
     var week: Int = 0
     var weather: String = "晴天"
     var money: Int = GameData.startMoney
@@ -26,9 +26,9 @@ struct SaveData: Codable, Equatable {
     var cargoCur: Int = 0
     var cargoMax: Int = GameData.startCargoMax
     var roomCargos: [RoomCargo] = []
-    var marketCargos: [MarketCargo] = []
+    var markets: [[MarketCargo]] = [[], [], []]
+    var marketIndex: Int = 0
     var buildingHouse: [String] = []
-    var archivePerson: [String] = []
 }
 
 enum LotteryKind: Int, CaseIterable, Identifiable {
@@ -45,6 +45,16 @@ enum LotteryKind: Int, CaseIterable, Identifiable {
     }
 }
 
+/// 结算数据
+struct Settlement {
+    let weeks: Int
+    let achievements: Int
+    let totalAchievements: Int
+    let houses: Int
+    let netWorth: Int
+    let milestoneTotal: Int
+}
+
 // MARK: - 游戏状态
 
 final class GameStore: ObservableObject {
@@ -53,6 +63,7 @@ final class GameStore: ObservableObject {
     @Published var lastLottery: Int?
     @Published var toast: String?
     @Published var isDead = false
+    @Published var settlement: Settlement?
 
     private let saveURL: URL
 
@@ -60,7 +71,12 @@ final class GameStore: ObservableObject {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         saveURL = dir.appendingPathComponent("buyhouse.json")
         state = Self.load(from: saveURL) ?? SaveData()
-        if state.marketCargos.isEmpty { rollMarket() }
+        if state.markets.count != GameData.marketCount {
+            state.markets = [[], [], []]
+        }
+        if state.markets.allSatisfy({ $0.isEmpty }) {
+            rollAllMarkets()
+        }
     }
 
     // MARK: 存档
@@ -82,33 +98,37 @@ final class GameStore: ObservableObject {
 
     // MARK: 查询
 
+    var currentMarket: [MarketCargo] {
+        let i = state.marketIndex
+        guard state.markets.indices.contains(i) else { return [] }
+        return state.markets[i]
+    }
+
     func roomNum(_ code: String) -> Int {
         state.roomCargos.first { $0.code == code }?.num ?? 0
     }
 
     func marketPrice(_ code: String) -> Int {
-        state.marketCargos.first { $0.code == code }?.priceCur ?? 0
+        currentMarket.first { $0.code == code }?.priceCur ?? 0
     }
 
     var cargoFree: Int { state.cargoMax - state.cargoCur }
 
-    /// 受现金与舱位约束的最大可买数量
     func maxBuyCount(_ code: String) -> Int {
         let price = marketPrice(code)
         guard price > 0 else { return 0 }
         return max(0, min(state.money / price, cargoFree))
     }
 
-    /// 最大可卖数量
     func maxSellCount(_ code: String) -> Int {
         roomNum(code)
     }
 
-    // MARK: 一周（原 click_market1）
+    // MARK: 推进一周（切市场或结算时调用）
 
     func tickWeek() {
-        rollMarket()
-        // 利息
+        rollAllMarkets()
+
         if state.cash > 0 {
             state.cash += Int(Double(state.cash) * GameData.cashInterest)
         }
@@ -119,16 +139,28 @@ final class GameStore: ObservableObject {
         state.weather = nextWeather(from: state.weather)
         state.health -= Int.random(in: 0..<3)
         if state.health < 0 { state.health = 0 }
+
         commit()
         if state.health == 0 { isDead = true }
     }
 
-    private func rollMarket() {
-        let picked = GameData.cargos.shuffled().prefix(5)
-        state.marketCargos = picked.map { def in
-            // 原版 randrange(min, max) 不含上界
-            MarketCargo(code: def.code, priceCur: Int.random(in: def.minPrice..<def.maxPrice))
+    /// 切换市场 = 强制度过一周
+    func switchMarket(to index: Int) {
+        guard index != state.marketIndex, state.markets.indices.contains(index) else { return }
+        state.marketIndex = index
+        tickWeek()
+    }
+
+    private func rollAllMarkets() {
+        var markets: [[MarketCargo]] = []
+        for _ in 0..<GameData.marketCount {
+            let picked = GameData.cargos.shuffled().prefix(GameData.marketSlots)
+            markets.append(picked.map { def in
+                // 原版 randrange(min, max) 不含上界
+                MarketCargo(code: def.code, priceCur: Int.random(in: def.minPrice..<def.maxPrice))
+            })
         }
+        state.markets = markets
         save()
     }
 
@@ -145,7 +177,7 @@ final class GameStore: ObservableObject {
         return def.next.first?.0 ?? "晴天"
     }
 
-    // MARK: 买卖（原 click_market_buy / click_room_sell）
+    // MARK: 买卖
 
     @discardableResult
     func buyCargo(_ code: String, count: Int) -> Bool {
@@ -186,7 +218,7 @@ final class GameStore: ObservableObject {
         return true
     }
 
-    // MARK: 医院 / 健身房（原版不检查现金，可透支）
+    // MARK: 医院 / 健身房
 
     func hospital() {
         let add: Int
@@ -262,7 +294,7 @@ final class GameStore: ObservableObject {
         return true
     }
 
-    // MARK: 中介（买出租屋位置）
+    // MARK: 中介
 
     @discardableResult
     func buyAgency(_ count: Int) -> Bool {
@@ -287,12 +319,13 @@ final class GameStore: ObservableObject {
         state.buildingHouse.append(b.name)
         state.money -= b.priceWan * 10000
         state.hope = min(100, state.hope + GameData.buildingHopeGain)
+        Progress.shared.addMilestone(b.name)
         commit()
         alert = "购买成功！"
         return true
     }
 
-    // MARK: 彩票（原版 1~5 / 6~10 的判定恒真，先保真保留）
+    // MARK: 彩票
 
     @discardableResult
     func lotteryBet(amount: Int, kind: LotteryKind) -> Bool {
@@ -303,8 +336,8 @@ final class GameStore: ObservableObject {
         let prize = Int.random(in: 1...10)
         var payout = 0
         switch kind {
-        case .low:   if prize <= 5 { payout = amount * 2 }          // 原版恒真
-        case .high:  if prize >= 6 { payout = amount * 2 }          // 原版恒真
+        case .low:   if prize <= 5 { payout = amount * 2 }      // 原版恒真
+        case .high:  if prize >= 6 { payout = amount * 2 }      // 原版恒真
         case .six:   if prize == 6 { payout = amount * 10 }
         case .odd:   if prize % 2 == 1 { payout = amount * 2 }
         case .even:  if prize % 2 == 0 { payout = amount * 2 }
@@ -316,51 +349,68 @@ final class GameStore: ObservableObject {
         return true
     }
 
-    // MARK: 重新开始
+    // MARK: 结束 / 重开
+
+    /// 结算当前存档
+    func finishRun() -> Settlement {
+        let s = Settlement(
+            weeks: state.week,
+            achievements: satisfiedAchievements().count,
+            totalAchievements: GameData.achievements.count,
+            houses: state.buildingHouse.count,
+            netWorth: state.money + state.cash + state.alimoney,
+            milestoneTotal: Progress.shared.totalMilestones
+        )
+        settlement = s
+        return s
+    }
 
     func restart() {
         state = SaveData()
-        rollMarket()
+        rollAllMarkets()
         isDead = false
         lastLottery = nil
-        alert = "重置成功！"
+        settlement = nil
+        alert = "已重新开始"
         save()
     }
 
-    // MARK: 成就
+    // MARK: 成就（全局永久，但结算按当前存档是否满足条件计数）
 
-    private func checkAchievements() {
-        var unlocked: [String] = []
+    func satisfiedAchievements() -> [String] {
+        var codes: [String] = []
         let total = state.money + state.cash + state.alimoney
 
-        func unlock(_ code: String) {
-            guard !state.archivePerson.contains(code) else { return }
-            state.archivePerson.append(code)
-            unlocked.append(GameData.achievementDesc(code))
-        }
-
-        if total >= 1_000_000 { unlock("million") }
-        if total >= 10_000_000 { unlock("ten_million") }
-        if total >= 100_000_000 { unlock("hundred_million") }
-        if state.cash >= 1_000_000 { unlock("million_cash") }
-        if state.alimoney >= 1_000_000 { unlock("million_alimoney") }
-        if !state.buildingHouse.isEmpty { unlock("one_house") }
+        if total >= 1_000_000 { codes.append("million") }
+        if total >= 10_000_000 { codes.append("ten_million") }
+        if total >= 100_000_000 { codes.append("hundred_million") }
+        if state.cash >= 1_000_000 { codes.append("million_cash") }
+        if state.alimoney >= 1_000_000 { codes.append("million_alimoney") }
+        if !state.buildingHouse.isEmpty { codes.append("one_house") }
         if state.buildingHouse.contains(where: { ["豪华住宅", "湖景别墅", "泳池私宅"].contains($0) }) {
-            unlock("big_house")
+            codes.append("big_house")
         }
-        if state.cargoMax >= 200 { unlock("hundred_agency") }
-        if state.week >= 52 { unlock("one_year") }
-        if state.week >= 156 { unlock("three_year") }
-        if state.hope == 100 { unlock("hope_full") }
+        if state.cargoMax >= 200 { codes.append("hundred_agency") }
+        if state.week >= 52 { codes.append("one_year") }
+        if state.week >= 156 { codes.append("three_year") }
+        if state.hope == 100 { codes.append("hope_full") }
+        return codes
+    }
 
-        if !unlocked.isEmpty {
-            save()
-            toast = unlocked.joined(separator: "\n")
+    private func checkAchievements() {
+        var fresh: [String] = []
+        for code in satisfiedAchievements() {
+            if Progress.shared.unlock(code) {
+                fresh.append(GameData.achievementDesc(code))
+            }
+        }
+        if !fresh.isEmpty {
+            toast = fresh.joined(separator: "\n")
         }
     }
 }
 
-// MARK: - 金额显示（照搬 MoneyFormat）
+// MARK: - 金额显示
 
 enum Money {
     static func text(_ value: Int) -> String {
@@ -374,4 +424,3 @@ enum Money {
         return s
     }
 }
-

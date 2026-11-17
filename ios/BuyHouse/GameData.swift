@@ -15,6 +15,14 @@ enum GameData {
     static let agencyUnitPrice = 10000   // 中介：1 个出租屋 1 万
     static let buildingHopeGain = 5
 
+    // MARK: - 三个市场
+
+    /// 三个市场独立刷新，切换即过一周
+    static let marketNames = ["二手市场", "批发市场", "农贸市场"]
+    static let marketCount = 3
+    /// 每个市场最多挂 5 种货（从 8 种里随机）
+    static let marketSlots = 5
+
     // MARK: - 货物（cargo.py）
     struct CargoDef {
         let code: String

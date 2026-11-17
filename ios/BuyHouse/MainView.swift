@@ -2,24 +2,29 @@ import SwiftUI
 
 struct MainView: View {
     @StateObject private var store = GameStore()
-    @State private var present: Present?
+    @ObservedObject private var progress = Progress.shared
 
-    enum Present: Identifiable {
-        case sale, archive, about
-        case hospital, sport, bank, alipay, agency, lottery
+    @State private var page: Page?
+    @State private var dialog: Dialog?
+
+    enum Page: String, Identifiable {
+        case sale, achievements, milestones, houses, settlement
+        var id: String { rawValue }
+    }
+
+    enum Dialog: Identifiable {
+        case hospital, sport, bank, alipay, agency, lottery, about
         case buy(MarketCargo), sell(RoomCargo)
 
         var id: String {
             switch self {
-            case .sale: return "sale"
-            case .archive: return "archive"
-            case .about: return "about"
             case .hospital: return "hospital"
             case .sport: return "sport"
             case .bank: return "bank"
             case .alipay: return "alipay"
             case .agency: return "agency"
             case .lottery: return "lottery"
+            case .about: return "about"
             case .buy(let c): return "buy-\(c.code)"
             case .sell(let c): return "sell-\(c.code)"
             }
@@ -37,7 +42,6 @@ struct MainView: View {
                     VStack(spacing: 10) {
                         personPanel
                         tradeRow
-                        housePanel
                         actionPanel
                     }
                     .padding(.horizontal, Layout.hPad)
@@ -45,20 +49,21 @@ struct MainView: View {
                     .padding(.bottom, 12)
                 }
 
-                tickBar
+                bottomBar
             }
 
+            if let dialog { dialogOverlay(dialog) }
             if store.isDead { deadOverlay }
             if let toast = store.toast { toastOverlay(toast) }
         }
         .preferredColorScheme(.light)
-        .sheet(item: $present) { item in
-            sheetView(item)
+        .sheet(item: $page) { item in
+            pageView(item)
         }
         .storeAlert(store)
     }
 
-    // MARK: - 顶部状态条
+    // MARK: - 顶部
 
     private var statusBar: some View {
         HStack(spacing: 8) {
@@ -70,7 +75,7 @@ struct MainView: View {
             Spacer(minLength: 8)
 
             Button {
-                present = .archive
+                page = .achievements
             } label: {
                 HStack(spacing: 4) {
                     Image("star")
@@ -78,7 +83,7 @@ struct MainView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 16, height: 16)
-                    Text("\(store.state.archivePerson.count)/\(GameData.achievements.count)")
+                    Text("\(progress.unlockedCount)/\(GameData.achievements.count)")
                         .font(Theme.pixel(12))
                         .foregroundColor(Theme.ink)
                 }
@@ -108,7 +113,7 @@ struct MainView: View {
             if Layout.isCompact {
                 VStack(alignment: .leading, spacing: 10) {
                     moneyColumn
-                    HStack(spacing: 16) {
+                    HStack(spacing: 14) {
                         barCell("健康", store.state.health, Theme.red)
                         barCell("声望", store.state.hope, Theme.green)
                     }
@@ -116,7 +121,7 @@ struct MainView: View {
             } else {
                 HStack(alignment: .top, spacing: 10) {
                     moneyColumn
-                    Spacer(minLength: 6)
+                    Spacer(minLength: 4)
                     VStack(alignment: .leading, spacing: 10) {
                         barCell("健康", store.state.health, Theme.red)
                         barCell("声望", store.state.hope, Theme.green)
@@ -162,12 +167,14 @@ struct MainView: View {
         }
     }
 
-    // MARK: - 左右两栏：出租屋 / 市场
+    // MARK: - 左右两栏
 
     private var tradeRow: some View {
         HStack(alignment: .top, spacing: 8) {
             roomPanel
+                .frame(minHeight: Layout.tradeMinHeight, alignment: .top)
             marketPanel
+                .frame(minHeight: Layout.tradeMinHeight, alignment: .top)
         }
     }
 
@@ -179,7 +186,7 @@ struct MainView: View {
                 }
                 ForEach(store.state.roomCargos) { item in
                     Button {
-                        present = .sell(item)
+                        dialog = .sell(item)
                     } label: {
                         rowContent(asset: GameData.cargo(item.code)?.asset ?? "item_beans",
                                    name: GameData.cargoName(item.code),
@@ -196,23 +203,49 @@ struct MainView: View {
 
     private var marketPanel: some View {
         PixelPanel(title: "市场") {
-            VStack(spacing: 0) {
-                if store.state.marketCargos.isEmpty {
-                    EmptyState(text: "行情刷新中")
-                }
-                ForEach(store.state.marketCargos) { item in
-                    Button {
-                        present = .buy(item)
-                    } label: {
-                        rowContent(asset: GameData.cargo(item.code)?.asset ?? "item_beans",
-                                   name: GameData.cargoName(item.code),
-                                   value: "\(item.priceCur)")
+            VStack(spacing: 8) {
+                marketTabs
+                VStack(spacing: 0) {
+                    if store.currentMarket.isEmpty {
+                        EmptyState(text: "休市")
                     }
-                    .buttonStyle(.plain)
-                    if item.id != store.state.marketCargos.last?.id {
-                        DottedLine()
+                    ForEach(store.currentMarket) { item in
+                        Button {
+                            dialog = .buy(item)
+                        } label: {
+                            rowContent(asset: GameData.cargo(item.code)?.asset ?? "item_beans",
+                                       name: GameData.cargoName(item.code),
+                                       value: "\(item.priceCur)")
+                        }
+                        .buttonStyle(.plain)
+                        if item.id != store.currentMarket.last?.id {
+                            DottedLine()
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    private var marketTabs: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<GameData.marketCount, id: \.self) { i in
+                let active = i == store.state.marketIndex
+                Button {
+                    store.switchMarket(to: i)
+                } label: {
+                    Text(GameData.marketNames[i])
+                        .font(Theme.pixel(12))
+                        .foregroundColor(active ? Theme.ink : Theme.sub)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 24)
+                        .background(active ? Theme.yellow : Theme.paper)
+                        .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(active)
             }
         }
     }
@@ -236,78 +269,38 @@ struct MainView: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: - 我的房产
-
-    private var ownedBuildings: [GameData.BuildingDef] {
-        GameData.buildings.filter { store.state.buildingHouse.contains($0.name) }
-    }
-
-    private var housePanel: some View {
-        PixelPanel(title: "房产 \(ownedBuildings.count)/\(GameData.buildings.count)") {
-            if ownedBuildings.isEmpty {
-                EmptyState(text: "还没有房产，去售楼部看看")
-            } else {
-                HStack(alignment: .bottom, spacing: 12) {
-                    ForEach(ownedBuildings.prefix(4), id: \.name) { b in
-                        VStack(spacing: 3) {
-                            Image(b.asset)
-                                .interpolation(.none)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 64)
-                            Text(b.name)
-                                .font(Theme.pixel(12))
-                                .foregroundColor(Theme.ink)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    if ownedBuildings.count > 4 {
-                        Text("+\(ownedBuildings.count - 4)")
-                            .font(Theme.pixel(12))
-                            .foregroundColor(Theme.sub)
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - 操作
 
     private var actionPanel: some View {
         PixelPanel(title: "操作") {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Layout.gridGap), count: 4),
                       spacing: Layout.gridGap) {
-                PixelButton(title: "医院", icon: "act_hospital", height: 40) { present = .hospital }
-                PixelButton(title: "健身房", icon: "act_gym", height: 40) { present = .sport }
-                PixelButton(title: "银行", icon: "act_bank", height: 40) { present = .bank }
-                PixelButton(title: "余X宝", icon: "act_alipay", height: 40) { present = .alipay }
-                PixelButton(title: "中介", icon: "act_agent", height: 40) { present = .agency }
-                PixelButton(title: "彩票", icon: "act_lottery", height: 40) { present = .lottery }
-                PixelButton(title: "售楼部", icon: "act_sales", height: 40) { present = .sale }
-                PixelButton(title: "关于", icon: "act_about", height: 40) { present = .about }
+                PixelButton(title: "医院", icon: "act_hospital", height: 40) { dialog = .hospital }
+                PixelButton(title: "健身房", icon: "act_gym", height: 40) { dialog = .sport }
+                PixelButton(title: "银行", icon: "act_bank", height: 40) { dialog = .bank }
+                PixelButton(title: "余X宝", icon: "act_alipay", height: 40) { dialog = .alipay }
+                PixelButton(title: "中介", icon: "act_agent", height: 40) { dialog = .agency }
+                PixelButton(title: "彩票", icon: "act_lottery", height: 40) { dialog = .lottery }
+                PixelButton(title: "售楼部", icon: "act_sales", height: 40) { page = .sale }
+                PixelButton(title: "关于", icon: "act_about", height: 40) { dialog = .about }
             }
         }
     }
 
-    // MARK: - 底部
+    // MARK: - 底部：房产 / 结束游戏 / 里程碑
 
-    private var tickBar: some View {
+    private var bottomBar: some View {
         VStack(spacing: 0) {
             Rectangle().fill(Theme.ink.opacity(0.25)).frame(height: 1)
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("健康 \(store.state.health)")
-                        .font(Theme.pixel(12))
-                        .foregroundColor(Theme.sub)
-                    Text("库存 \(store.state.cargoCur)/\(store.state.cargoMax)")
-                        .font(Theme.pixel(12))
-                        .foregroundColor(Theme.sub)
+            HStack(spacing: 8) {
+                PixelButton(title: "房产 \(store.state.buildingHouse.count)",
+                            height: 44) { page = .houses }
+                PixelButton(title: "结束游戏", height: 44) {
+                    _ = store.finishRun()
+                    page = .settlement
                 }
-                PixelButton(title: "过一周", primary: true, height: 46) {
-                    store.tickWeek()
-                }
+                PixelButton(title: "里程碑 \(progress.totalMilestones)",
+                            height: 44) { page = .milestones }
             }
             .padding(.horizontal, Layout.hPad)
             .padding(.vertical, 8)
@@ -315,7 +308,75 @@ struct MainView: View {
         }
     }
 
-    // MARK: - 遮罩
+    // MARK: - 弹窗遮罩
+
+    private func dialogOverlay(_ item: Dialog) -> some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture { dialog = nil }
+
+            Group {
+                switch item {
+                case .hospital:
+                    ConfirmDialog(store: store, title: "医院",
+                                  message: "花费 \(GameData.hospitalCost) 元恢复健康，确定？",
+                                  onConfirm: { store.hospital() },
+                                  onClose: { dialog = nil })
+                case .sport:
+                    ConfirmDialog(store: store, title: "健身房",
+                                  message: "花费 \(GameData.sportCost) 元恢复健康，确定？",
+                                  onConfirm: { store.sport() },
+                                  onClose: { dialog = nil })
+                case .bank:
+                    NumberDialog(store: store, title: "存取款",
+                                 prompt: "周息 \(Int(GameData.cashInterest * 100))%",
+                                 inLabel: "存款", outLabel: "取款",
+                                 onIn: { store.depositToBank($0) },
+                                 onOut: { store.withdrawFromBank($0) },
+                                 onClose: { dialog = nil })
+                case .alipay:
+                    NumberDialog(store: store, title: "余X宝",
+                                 prompt: "周息 \(Int(GameData.alimoneyInterest * 100))%",
+                                 inLabel: "存入", outLabel: "提现",
+                                 onIn: { store.depositToAlipay($0) },
+                                 onOut: { store.withdrawFromAlipay($0) },
+                                 onClose: { dialog = nil })
+                case .agency:
+                    NumberDialog(store: store, title: "购买出租屋",
+                                 prompt: "1 个 / 1 万元，当前 \(store.state.cargoMax) 个",
+                                 inLabel: "确定", outLabel: nil,
+                                 onIn: { store.buyAgency($0) },
+                                 onOut: { _ in false },
+                                 onClose: { dialog = nil })
+                case .lottery:
+                    LotteryDialog(store: store, onClose: { dialog = nil })
+                case .about:
+                    AboutDialog(onClose: { dialog = nil })
+                case .buy(let item):
+                    NumberDialog(store: store, title: "买入 \(GameData.cargoName(item.code))",
+                                 prompt: "单价 \(item.priceCur) 元 · 最多可买 \(store.maxBuyCount(item.code))",
+                                 inLabel: "买入", outLabel: nil,
+                                 defaultValue: store.maxBuyCount(item.code),
+                                 onIn: { store.buyCargo(item.code, count: $0) },
+                                 onOut: { _ in false },
+                                 onClose: { dialog = nil })
+                case .sell(let item):
+                    NumberDialog(store: store, title: "卖出 \(GameData.cargoName(item.code))",
+                                 prompt: "现价 \(store.marketPrice(item.code)) 元 · 持有 \(item.num)",
+                                 inLabel: "卖出", outLabel: nil,
+                                 defaultValue: item.num,
+                                 onIn: { store.sellCargo(item.code, count: $0) },
+                                 onOut: { _ in false },
+                                 onClose: { dialog = nil })
+                }
+            }
+            .frame(maxWidth: 300)
+            .padding(.horizontal, 24)
+        }
+    }
+
+    // MARK: - 遮罩：成就提示 / 死亡
 
     private func toastOverlay(_ text: String) -> some View {
         VStack {
@@ -332,83 +393,52 @@ struct MainView: View {
                     }
                 }
             }
+            .frame(maxWidth: 300)
             .padding(.horizontal, 40)
-            .padding(.bottom, 100)
+            .padding(.bottom, 110)
         }
     }
 
     private var deadOverlay: some View {
         ZStack {
-            Color.black.opacity(0.45).ignoresSafeArea()
+            Color.black.opacity(0.5).ignoresSafeArea()
             PixelPanel(title: "游戏结束") {
-                VStack(spacing: 14) {
+                VStack(spacing: 12) {
                     Text("共生存 \(store.state.week) 周")
                         .font(Theme.pixel(12))
                         .foregroundColor(Theme.red)
-                    PixelButton(title: "重新开始") { store.restart() }
+                    HStack(spacing: 8) {
+                        PixelButton(title: "结算") {
+                            _ = store.finishRun()
+                            store.isDead = false
+                            page = .settlement
+                        }
+                        PixelButton(title: "重开", primary: true) {
+                            store.restart()
+                        }
+                    }
                 }
-                .frame(width: 200)
+                .frame(width: 220)
             }
-            .padding(50)
+            .padding(40)
         }
     }
 
-    // MARK: - 弹窗路由
+    // MARK: - 页面
 
     @ViewBuilder
-    private func sheetView(_ item: Present) -> some View {
+    private func pageView(_ item: Page) -> some View {
         switch item {
         case .sale:
             SaleOfficeView(store: store)
-        case .archive:
-            ArchiveView(store: store)
-        case .about:
-            AboutView()
-        case .hospital:
-            ConfirmDialog(store: store, title: "医院",
-                          message: "花费 \(GameData.hospitalCost) 元恢复健康，确定？") {
-                store.hospital()
-            }
-        case .sport:
-            ConfirmDialog(store: store, title: "健身房",
-                          message: "花费 \(GameData.sportCost) 元恢复健康，确定？") {
-                store.sport()
-            }
-        case .bank:
-            NumberDialog(title: "存取款",
-                         prompt: "周息 \(Int(GameData.cashInterest * 100))%",
-                         inLabel: "存款", outLabel: "取款",
-                         onIn: { store.depositToBank($0) },
-                         onOut: { store.withdrawFromBank($0) })
-        case .alipay:
-            NumberDialog(title: "余X宝",
-                         prompt: "周息 \(Int(GameData.alimoneyInterest * 100))%",
-                         inLabel: "存入", outLabel: "提现",
-                         onIn: { store.depositToAlipay($0) },
-                         onOut: { store.withdrawFromAlipay($0) })
-        case .agency:
-            NumberDialog(title: "购买出租屋",
-                         prompt: "1 个 / 1 万元，当前 \(store.state.cargoMax) 个",
-                         inLabel: "确定", outLabel: nil,
-                         onIn: { store.buyAgency($0) },
-                         onOut: { _ in false })
-        case .lottery:
-            LotteryView(store: store)
-        case .buy(let item):
-            let maxCount = store.maxBuyCount(item.code)
-            NumberDialog(title: "买入 \(GameData.cargoName(item.code))",
-                         prompt: "单价 \(item.priceCur) 元 · 最多可买 \(maxCount)",
-                         inLabel: "买入", outLabel: nil,
-                         defaultValue: maxCount,
-                         onIn: { store.buyCargo(item.code, count: $0) },
-                         onOut: { _ in false })
-        case .sell(let item):
-            NumberDialog(title: "卖出 \(GameData.cargoName(item.code))",
-                         prompt: "现价 \(store.marketPrice(item.code)) 元 · 持有 \(item.num)",
-                         inLabel: "卖出", outLabel: nil,
-                         defaultValue: item.num,
-                         onIn: { store.sellCargo(item.code, count: $0) },
-                         onOut: { _ in false })
+        case .achievements:
+            AchievementsView()
+        case .milestones:
+            MilestonesView()
+        case .houses:
+            HousesView(store: store)
+        case .settlement:
+            SettlementView(store: store)
         }
     }
 }

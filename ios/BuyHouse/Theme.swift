@@ -138,8 +138,8 @@ struct StatBar: View {
             Rectangle().fill(Theme.line)
             Rectangle()
                 .fill(color)
-                .frame(width: max(0, (width - 4) * CGFloat(min(max(value, 0), 100)) / 100))
-                .padding(.leading, 2)
+                .frame(width: max(0, (width - 2) * CGFloat(min(max(value, 0), 100)) / 100), height: 8)
+                .offset(x: 1)
             HStack(spacing: 1) {
                 ForEach(0..<9, id: \.self) { _ in
                     Rectangle()
