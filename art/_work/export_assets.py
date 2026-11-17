@@ -5,7 +5,8 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from sprites import GOODS, WEATHER, BADGE, PANEL, BTN, BTN_DOWN, ACTION_ICONS
+from sprites import (GOODS, WEATHER, BADGE, PANEL, BTN, BTN_DOWN, ACTION_ICONS,
+                     EVENT_PAPER, EVENT_STAMP)
 
 IOS = r'E:\GithubRepo\game-buyhouse\ios\BuyHouse\Resources'
 XC = os.path.join(IOS, 'Assets.xcassets')
@@ -52,6 +53,8 @@ def main():
     emit('ui_panel', PANEL)
     emit('ui_button', BTN)
     emit('ui_button_pressed', BTN_DOWN)
+    emit('event_paper', EVENT_PAPER)
+    emit('event_stamp', EVENT_STAMP)
     for code, cname, im in ACTION_ICONS:
         emit(f'act_{code}', im)
 

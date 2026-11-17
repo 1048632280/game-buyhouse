@@ -469,6 +469,32 @@ ACTION_ICONS = [
     ('about', '关于', ABOUT),
 ]
 
+# ---------------- 事件报纸 ----------------
+def _make_paper():
+    """报纸卡片 9-slice：近白纸面 + 墨色外框 + 浅灰内框。"""
+    im = Image.new('RGBA', (24, 24), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 23, 23], fill=PAL['W'] + (255,))
+    d.rectangle([0, 0, 23, 23], outline=PAL['K'] + (255,))
+    d.rectangle([2, 2, 21, 21], outline=PAL['C'] + (255,))
+    return im
+
+
+EVENT_PAPER = _make_paper()
+
+EVENT_STAMP = sprite([
+    '...KKKK...',
+    '..KRRRRK..',
+    '.KRRRRRRK.',
+    'KRRWWRRRRK',
+    'KRRWWRRRRK',
+    'KRRRRRRRRK',
+    'KRRRRRRRRK',
+    '.KRRRRRRK.',
+    '..KRRRRK..',
+    '...KKKK...',
+])
+
 GOODS = [
     ('beans', '转基因大豆', SOYBEAN),
     ('mask', '防毒面具', MASK),

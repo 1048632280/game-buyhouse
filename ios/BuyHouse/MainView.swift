@@ -175,7 +175,42 @@ struct MainView: View {
                 .frame(height: Layout.tradeHeight)
             marketPanel
                 .frame(height: Layout.tradeHeight)
+                .overlay {
+                    if store.hasPendingEvents {
+                        eventOverlay
+                    }
+                }
+                .clipped()
         }
+    }
+
+    /// 报纸叠在市场栏上，一张一张点掉
+    private var eventOverlay: some View {
+        ZStack(alignment: .top) {
+            if store.pendingEvents.count > 1 {
+                ForEach(1..<store.pendingEvents.count, id: \.self) { i in
+                    Image("event_paper")
+                        .interpolation(.none)
+                        .resizable(capInsets: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4),
+                                   resizingMode: .stretch)
+                        .frame(height: 196)
+                        .offset(x: CGFloat(i) * 3, y: CGFloat(i) * 4)
+                }
+            }
+            if let event = store.pendingEvents.first {
+                NewspaperCard(event: event)
+                    .frame(height: 196)
+                    .onTapGesture {
+                        withAnimation(.easeOut(duration: 0.16)) {
+                            store.dismissEvent()
+                        }
+                    }
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Theme.paper)
     }
 
     private var roomPanel: some View {
@@ -277,7 +312,7 @@ struct MainView: View {
                             .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .disabled(active)
+                    .disabled(active || store.hasPendingEvents)
                 }
             }
         }

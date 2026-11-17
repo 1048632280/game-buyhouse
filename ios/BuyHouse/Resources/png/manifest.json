@@ -182,6 +182,20 @@
   ]
  },
  {
+  "name": "event_paper",
+  "size": [
+   24,
+   24
+  ]
+ },
+ {
+  "name": "event_stamp",
+  "size": [
+   16,
+   16
+  ]
+ },
+ {
   "name": "act_hospital",
   "size": [
    16,

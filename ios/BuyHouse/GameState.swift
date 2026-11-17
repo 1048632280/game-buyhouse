@@ -15,6 +15,11 @@ struct MarketCargo: Codable, Identifiable, Equatable {
     var id: String { code }
 }
 
+struct EventRecord: Codable {
+    var week: Int
+    var id: String
+}
+
 struct SaveData: Codable {
     var week: Int = 0
     var weather: String = "晴天"
@@ -29,6 +34,8 @@ struct SaveData: Codable {
     var markets: [[MarketCargo]] = [[], [], []]
     var marketIndex: Int = 0
     var buildingHouse: [String] = []
+    var recentEvents: [EventRecord] = []
+    var healthEventLastWeek: Bool = false
 }
 
 enum LotteryKind: Int, CaseIterable, Identifiable {
@@ -65,6 +72,8 @@ final class GameStore: ObservableObject {
     @Published var toast: String?
     @Published var isDead = false
     @Published var settlement: Settlement?
+    /// 本周待阅读的事件（报纸叠放）
+    @Published var pendingEvents: [ActiveEvent] = []
 
     private let saveURL: URL
 
@@ -141,9 +150,26 @@ final class GameStore: ObservableObject {
         state.health -= Int.random(in: 0..<3)
         if state.health < 0 { state.health = 0 }
 
+        // 本周事件：先结算，再作为报纸叠在市场栏上
+        let events = rollEvents()
+        applyEvents(events)
+        pendingEvents = events
+        state.healthEventLastWeek = events.contains { $0.category == .health }
+        let horizon = state.week - 3
+        state.recentEvents = state.recentEvents.filter { $0.week > horizon }
+            + events.map { EventRecord(week: state.week, id: $0.id) }
+
         commit()
         if state.health == 0 { isDead = true }
     }
+
+    /// 玩家点掉最上面一张报纸
+    func dismissEvent() {
+        guard !pendingEvents.isEmpty else { return }
+        pendingEvents.removeFirst()
+    }
+
+    var hasPendingEvents: Bool { !pendingEvents.isEmpty }
 
     /// 切换市场 = 强制度过一周
     func switchMarket(to index: Int) {
@@ -175,6 +201,152 @@ final class GameStore: ObservableObject {
             roll -= weight
         }
         return def.next.first?.0 ?? "晴天"
+    }
+
+    // MARK: - 事件引擎
+
+    private static func rollEventCount() -> Int {
+        let r = Int.random(in: 0..<100)
+        if r < 35 { return 1 }
+        if r < 80 { return 2 }
+        return 3
+    }
+
+    private func rollEvents() -> [ActiveEvent] {
+        let count = Self.rollEventCount()
+        var caps: [EventCategory: Int] = [:]
+        var used = Set<String>()
+        let recent = Set(state.recentEvents.filter { $0.week > state.week - 3 }.map { $0.id })
+        var result: [ActiveEvent] = []
+
+        for _ in 0..<count {
+            let candidates = EventCategory.allCases.filter { category in
+                guard (caps[category] ?? 0) < category.weeklyCap else { return false }
+                if category == .health && state.healthEventLastWeek { return false }
+                return !EventTable.candidates(category: category,
+                                              weather: state.weather,
+                                              recent: recent,
+                                              used: used).isEmpty
+            }
+            guard let category = pickCategory(candidates) else { break }
+            let pool = EventTable.candidates(category: category,
+                                             weather: state.weather,
+                                             recent: recent,
+                                             used: used)
+            guard let template = pickTemplate(pool) else { break }
+            caps[category, default: 0] += 1
+            used.insert(template.id)
+            result.append(resolve(template))
+        }
+        return result
+    }
+
+    private func pickCategory(_ list: [EventCategory]) -> EventCategory? {
+        let total = list.reduce(0) { $0 + $1.weight }
+        guard total > 0 else { return nil }
+        var roll = Int.random(in: 0..<total)
+        for c in list {
+            if roll < c.weight { return c }
+            roll -= c.weight
+        }
+        return list.last
+    }
+
+    private func pickTemplate(_ list: [EventTemplate]) -> EventTemplate? {
+        let total = list.reduce(0) { $0 + $1.weight }
+        guard total > 0 else { return nil }
+        var roll = Int.random(in: 0..<total)
+        for t in list {
+            if roll < t.weight { return t }
+            roll -= t.weight
+        }
+        return list.last
+    }
+
+    private func resolve(_ template: EventTemplate) -> ActiveEvent {
+        let randomGood = currentMarket.randomElement()
+        let randomName = randomGood.map { GameData.cargoName($0.code) } ?? "货"
+
+        var body = template.body
+        body = body.replacingOccurrences(of: "{货}", with: randomName)
+
+        var effects: [ResolvedEffect] = []
+        var parts: [String] = []
+        var positive = true
+
+        for effect in template.effects {
+            switch effect {
+            case .cashPct(let p):
+                effects.append(.cashPct(p))
+                parts.append("现金 \(p >= 0 ? "+" : "−")\(Int((abs(p) * 100).rounded()))%")
+                if p < 0 { positive = false }
+
+            case .health(let v):
+                effects.append(.health(v))
+                parts.append("健康 \(v >= 0 ? "+" : "−")\(abs(v))")
+                if v < 0 { positive = false }
+
+            case .hope(let v):
+                effects.append(.hope(v))
+                parts.append("声望 \(v >= 0 ? "+" : "−")\(abs(v))")
+                if v < 0 { positive = false }
+
+            case .marketAll(let range):
+                let f = Double.random(in: range)
+                effects.append(.market(codes: nil, factor: f))
+                parts.append("全场 ×\(String(format: "%.2f", f))")
+                if f < 1 { positive = false }
+
+            case .marketRandom(let range):
+                guard let good = randomGood else { break }
+                let f = Double.random(in: range)
+                effects.append(.market(codes: [good.code], factor: f))
+                parts.append("\(randomName) ×\(String(format: "%.2f", f))")
+                if f < 1 { positive = false }
+
+            case .marketCodes(let codes, let range):
+                let f = Double.random(in: range)
+                effects.append(.market(codes: codes, factor: f))
+                let names = codes.map { GameData.cargoName($0) }.joined(separator: "、")
+                parts.append("\(names) ×\(String(format: "%.2f", f))")
+                if f < 1 { positive = false }
+            }
+        }
+
+        return ActiveEvent(id: template.id,
+                           category: template.category,
+                           headline: template.headline,
+                           body: body,
+                           summary: parts.isEmpty ? "无变化" : parts.joined(separator: " · "),
+                           positive: positive,
+                           effects: effects)
+    }
+
+    private func applyEvents(_ events: [ActiveEvent]) {
+        for event in events {
+            for effect in event.effects {
+                switch effect {
+                case .cashPct(let p):
+                    let delta = Int((Double(state.cash) * p).rounded())
+                    state.cash = max(0, state.cash + delta)
+
+                case .health(let v):
+                    state.health = min(100, max(0, state.health + v))
+
+                case .hope(let v):
+                    state.hope = min(100, max(0, state.hope + v))
+
+                case .market(let codes, let factor):
+                    let i = state.marketIndex
+                    guard state.markets.indices.contains(i) else { continue }
+                    for idx in state.markets[i].indices {
+                        if let codes, !codes.contains(state.markets[i][idx].code) { continue }
+                        let price = Double(state.markets[i][idx].priceCur) * factor
+                        state.markets[i][idx].priceCur = max(1, Int(price.rounded()))
+                    }
+                }
+            }
+        }
     }
 
     // MARK: 买卖

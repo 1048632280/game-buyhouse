@@ -392,6 +392,57 @@ struct SettlementView: View {
     }
 }
 
+// MARK: - 报纸卡片
+
+struct NewspaperCard: View {
+    let event: ActiveEvent
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(event.headline)
+                .font(Theme.pixel(12))
+                .foregroundColor(Theme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Rectangle().fill(Theme.ink).frame(height: 2)
+
+            Text(event.body)
+                .font(Theme.pixel(12))
+                .foregroundColor(Theme.sub)
+                .lineSpacing(3)
+                .lineLimit(6)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            Rectangle().fill(Theme.line).frame(height: 1)
+
+            HStack(alignment: .bottom, spacing: 4) {
+                Text(event.summary)
+                    .font(Theme.pixel(12))
+                    .foregroundColor(event.positive ? Theme.deepGreen : Theme.red)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.65)
+                Spacer(minLength: 0)
+                Image("event_stamp")
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                    .opacity(0.85)
+            }
+        }
+        .padding(9)
+        .background(
+            Image("event_paper")
+                .interpolation(.none)
+                .resizable(capInsets: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4),
+                           resizingMode: .stretch)
+        )
+    }
+}
+
 // MARK: - 小弹窗：确认
 
 struct ConfirmDialog: View {
