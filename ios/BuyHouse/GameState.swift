@@ -45,21 +45,22 @@ enum LotteryKind: Int, CaseIterable, Identifiable {
     }
 }
 
-/// 结算数据
+/// 结算数据（只看本局）
 struct Settlement {
     let weeks: Int
-    let achievements: Int
-    let totalAchievements: Int
-    let houses: Int
     let netWorth: Int
-    let milestoneTotal: Int
+    let achievements: [String]   // 本局满足条件的成就描述
+    let houses: [String]         // 本局拥有的房产名
 }
 
 // MARK: - 游戏状态
 
 final class GameStore: ObservableObject {
     @Published private(set) var state: SaveData
+    /// 失败提示，由弹窗就地显示
     @Published var alert: String?
+    /// 成功后的结果文案（医院恢复量、彩票开奖），由弹窗就地显示
+    @Published var lastResult: String?
     @Published var lastLottery: Int?
     @Published var toast: String?
     @Published var isDead = false
@@ -124,7 +125,7 @@ final class GameStore: ObservableObject {
         roomNum(code)
     }
 
-    // MARK: 推进一周（切市场或结算时调用）
+    // MARK: 推进一周
 
     func tickWeek() {
         rollAllMarkets()
@@ -156,7 +157,6 @@ final class GameStore: ObservableObject {
         for _ in 0..<GameData.marketCount {
             let picked = GameData.cargos.shuffled().prefix(GameData.marketSlots)
             markets.append(picked.map { def in
-                // 原版 randrange(min, max) 不含上界
                 MarketCargo(code: def.code, priceCur: Int.random(in: def.minPrice..<def.maxPrice))
             })
         }
@@ -186,6 +186,12 @@ final class GameStore: ObservableObject {
         guard count <= state.money / price else { alert = "现金不足！"; return false }
         guard count <= cargoFree else { alert = "库存不足！"; return false }
 
+        let existed = state.roomCargos.contains { $0.code == code }
+        if !existed && state.roomCargos.count >= GameData.roomSlots {
+            alert = "货架已满（最多 \(GameData.roomSlots) 种）"
+            return false
+        }
+
         if let idx = state.roomCargos.firstIndex(where: { $0.code == code }) {
             state.roomCargos[idx].priceBuy = price
             state.roomCargos[idx].num += count
@@ -194,8 +200,8 @@ final class GameStore: ObservableObject {
         }
         state.money -= count * price
         state.cargoCur += count
+        alert = nil
         commit()
-        alert = "购买成功！"
         return true
     }
 
@@ -213,8 +219,8 @@ final class GameStore: ObservableObject {
         }
         state.money += count * price
         state.cargoCur -= count
+        alert = nil
         commit()
-        alert = "卖出成功！"
         return true
     }
 
@@ -231,7 +237,7 @@ final class GameStore: ObservableObject {
         state.health += real
         state.money -= GameData.hospitalCost
         commit()
-        alert = "花费\(GameData.hospitalCost)元，恢复健康\(real)点"
+        lastResult = "花费\(GameData.hospitalCost)元，恢复健康\(real)点"
     }
 
     func sport() {
@@ -245,7 +251,7 @@ final class GameStore: ObservableObject {
         state.health += real
         state.money -= GameData.sportCost
         commit()
-        alert = "花费\(GameData.sportCost)元，恢复健康\(real)点"
+        lastResult = "花费\(GameData.sportCost)元，恢复健康\(real)点"
     }
 
     // MARK: 银行 / 余X宝
@@ -256,8 +262,8 @@ final class GameStore: ObservableObject {
         guard amount <= state.money else { alert = "现金不足！"; return false }
         state.money -= amount
         state.cash += amount
+        alert = nil
         commit()
-        alert = "存款成功！"
         return true
     }
 
@@ -267,8 +273,8 @@ final class GameStore: ObservableObject {
         guard amount <= state.cash else { alert = "存款不足！"; return false }
         state.money += amount
         state.cash -= amount
+        alert = nil
         commit()
-        alert = "取款成功！"
         return true
     }
 
@@ -278,8 +284,8 @@ final class GameStore: ObservableObject {
         guard amount <= state.money else { alert = "现金不足！"; return false }
         state.money -= amount
         state.alimoney += amount
+        alert = nil
         commit()
-        alert = "存入成功！"
         return true
     }
 
@@ -289,8 +295,8 @@ final class GameStore: ObservableObject {
         guard amount <= state.alimoney else { alert = "提现余额不足！"; return false }
         state.money += amount
         state.alimoney -= amount
+        alert = nil
         commit()
-        alert = "提现成功！"
         return true
     }
 
@@ -302,8 +308,8 @@ final class GameStore: ObservableObject {
         guard count <= state.money / GameData.agencyUnitPrice else { alert = "现金不足！"; return false }
         state.money -= count * GameData.agencyUnitPrice
         state.cargoMax += count
+        alert = nil
         commit()
-        alert = "购买成功！"
         return true
     }
 
@@ -315,13 +321,20 @@ final class GameStore: ObservableObject {
 
     @discardableResult
     func buyBuilding(_ b: GameData.BuildingDef) -> Bool {
-        guard state.money >= b.priceWan * 10000 else { alert = "现金不足！"; return false }
+        guard !state.buildingHouse.contains(b.name) else {
+            alert = "已经拥有这套房了"
+            return false
+        }
+        guard state.money >= b.priceWan * 10000 else {
+            alert = "现金不足！"
+            return false
+        }
         state.buildingHouse.append(b.name)
         state.money -= b.priceWan * 10000
         state.hope = min(100, state.hope + GameData.buildingHopeGain)
         Progress.shared.addMilestone(b.name)
+        alert = nil
         commit()
-        alert = "购买成功！"
         return true
     }
 
@@ -344,22 +357,20 @@ final class GameStore: ObservableObject {
         }
         state.money += payout
         lastLottery = prize
+        lastResult = payout > 0 ? "开彩 \(prize) · 恭喜获得\(payout)元！" : "开彩 \(prize) · 未中彩~"
+        alert = nil
         commit()
-        alert = payout > 0 ? "恭喜获得\(payout)元！" : "未中彩~"
         return true
     }
 
     // MARK: 结束 / 重开
 
-    /// 结算当前存档
     func finishRun() -> Settlement {
         let s = Settlement(
             weeks: state.week,
-            achievements: satisfiedAchievements().count,
-            totalAchievements: GameData.achievements.count,
-            houses: state.buildingHouse.count,
             netWorth: state.money + state.cash + state.alimoney,
-            milestoneTotal: Progress.shared.totalMilestones
+            achievements: satisfiedAchievements().map { GameData.achievementDesc($0) },
+            houses: state.buildingHouse
         )
         settlement = s
         return s
@@ -370,12 +381,13 @@ final class GameStore: ObservableObject {
         rollAllMarkets()
         isDead = false
         lastLottery = nil
+        lastResult = nil
+        alert = nil
         settlement = nil
-        alert = "已重新开始"
         save()
     }
 
-    // MARK: 成就（全局永久，但结算按当前存档是否满足条件计数）
+    // MARK: 成就
 
     func satisfiedAchievements() -> [String] {
         var codes: [String] = []

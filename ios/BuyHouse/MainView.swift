@@ -42,6 +42,7 @@ struct MainView: View {
                     VStack(spacing: 10) {
                         personPanel
                         tradeRow
+                        marketSwitchBar
                         actionPanel
                     }
                     .padding(.horizontal, Layout.hPad)
@@ -60,7 +61,6 @@ struct MainView: View {
         .sheet(item: $page) { item in
             pageView(item)
         }
-        .storeAlert(store)
     }
 
     // MARK: - 顶部
@@ -167,14 +167,14 @@ struct MainView: View {
         }
     }
 
-    // MARK: - 左右两栏
+    // MARK: - 两栏
 
     private var tradeRow: some View {
         HStack(alignment: .top, spacing: 8) {
             roomPanel
-                .frame(minHeight: Layout.tradeMinHeight, alignment: .top)
+                .frame(height: Layout.tradeHeight)
             marketPanel
-                .frame(minHeight: Layout.tradeMinHeight, alignment: .top)
+                .frame(width: Layout.marketColumnWidth, height: Layout.tradeHeight)
         }
     }
 
@@ -188,85 +188,99 @@ struct MainView: View {
                     Button {
                         dialog = .sell(item)
                     } label: {
-                        rowContent(asset: GameData.cargo(item.code)?.asset ?? "item_beans",
-                                   name: GameData.cargoName(item.code),
-                                   value: "×\(item.num)")
+                        HStack(spacing: 4) {
+                            PixelImage(name: GameData.cargo(item.code)?.asset ?? "item_beans", scale: 2)
+                            Text(GameData.cargoName(item.code))
+                                .font(Theme.pixel(12))
+                                .foregroundColor(Theme.ink)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                            Spacer(minLength: 2)
+                            Text("买入\(item.priceBuy)")
+                                .font(Theme.pixel(12))
+                                .foregroundColor(Theme.sub)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                            Text("×\(item.num)")
+                                .font(Theme.pixel(12))
+                                .foregroundColor(Theme.ink)
+                                .lineLimit(1)
+                        }
+                        .frame(height: 42)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     if item.id != store.state.roomCargos.last?.id {
                         DottedLine()
                     }
                 }
+                Spacer(minLength: 0)
             }
         }
     }
 
     private var marketPanel: some View {
         PixelPanel(title: "市场") {
-            VStack(spacing: 8) {
-                marketTabs
-                VStack(spacing: 0) {
-                    if store.currentMarket.isEmpty {
-                        EmptyState(text: "休市")
+            VStack(spacing: 0) {
+                if store.currentMarket.isEmpty {
+                    EmptyState(text: "休市")
+                }
+                ForEach(store.currentMarket) { item in
+                    Button {
+                        dialog = .buy(item)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelImage(name: GameData.cargo(item.code)?.asset ?? "item_beans", scale: 2)
+                            Text(GameData.cargoName(item.code))
+                                .font(Theme.pixel(12))
+                                .foregroundColor(Theme.ink)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                            Spacer(minLength: 2)
+                            Text("\(item.priceCur)")
+                                .font(Theme.pixel(12))
+                                .foregroundColor(Theme.sub)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .frame(height: 42)
+                        .contentShape(Rectangle())
                     }
-                    ForEach(store.currentMarket) { item in
-                        Button {
-                            dialog = .buy(item)
-                        } label: {
-                            rowContent(asset: GameData.cargo(item.code)?.asset ?? "item_beans",
-                                       name: GameData.cargoName(item.code),
-                                       value: "\(item.priceCur)")
-                        }
-                        .buttonStyle(.plain)
-                        if item.id != store.currentMarket.last?.id {
-                            DottedLine()
-                        }
+                    .buttonStyle(.plain)
+                    if item.id != store.currentMarket.last?.id {
+                        DottedLine()
                     }
                 }
+                Spacer(minLength: 0)
             }
         }
     }
 
-    private var marketTabs: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<GameData.marketCount, id: \.self) { i in
-                let active = i == store.state.marketIndex
-                Button {
-                    store.switchMarket(to: i)
-                } label: {
-                    Text(GameData.marketNames[i])
-                        .font(Theme.pixel(12))
-                        .foregroundColor(active ? Theme.ink : Theme.sub)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 24)
-                        .background(active ? Theme.yellow : Theme.paper)
-                        .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+    // MARK: - 市场切换（原来房产那一栏）
+
+    private var marketSwitchBar: some View {
+        PixelPanel(title: "切换市场") {
+            HStack(spacing: 6) {
+                ForEach(0..<GameData.marketCount, id: \.self) { i in
+                    let active = i == store.state.marketIndex
+                    Button {
+                        store.switchMarket(to: i)
+                    } label: {
+                        Text(GameData.marketNames[i])
+                            .font(Theme.pixel(12))
+                            .foregroundColor(active ? Theme.ink : Theme.sub)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 34)
+                            .background(active ? Theme.yellow : Theme.paper)
+                            .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(active)
                 }
-                .buttonStyle(.plain)
-                .disabled(active)
             }
         }
-    }
-
-    private func rowContent(asset: String, name: String, value: String) -> some View {
-        HStack(spacing: 6) {
-            PixelImage(name: asset, scale: 2)
-            Text(name)
-                .font(Theme.pixel(12))
-                .foregroundColor(Theme.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.65)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text(value)
-                .font(Theme.pixel(12))
-                .foregroundColor(Theme.sub)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .padding(.vertical, 6)
-        .contentShape(Rectangle())
     }
 
     // MARK: - 操作
@@ -287,20 +301,22 @@ struct MainView: View {
         }
     }
 
-    // MARK: - 底部：房产 / 结束游戏 / 里程碑
+    // MARK: - 底部
 
     private var bottomBar: some View {
         VStack(spacing: 0) {
             Rectangle().fill(Theme.ink.opacity(0.25)).frame(height: 1)
             HStack(spacing: 8) {
-                PixelButton(title: "房产 \(store.state.buildingHouse.count)",
-                            height: 44) { page = .houses }
+                PixelButton(title: "房产 \(store.state.buildingHouse.count)", height: 44) {
+                    page = .houses
+                }
                 PixelButton(title: "结束游戏", height: 44) {
                     _ = store.finishRun()
                     page = .settlement
                 }
-                PixelButton(title: "里程碑 \(progress.totalMilestones)",
-                            height: 44) { page = .milestones }
+                PixelButton(title: "里程碑 \(progress.totalMilestones)", height: 44) {
+                    page = .milestones
+                }
             }
             .padding(.horizontal, Layout.hPad)
             .padding(.vertical, 8)
@@ -308,7 +324,7 @@ struct MainView: View {
         }
     }
 
-    // MARK: - 弹窗遮罩
+    // MARK: - 弹窗
 
     private func dialogOverlay(_ item: Dialog) -> some View {
         ZStack {
@@ -376,7 +392,7 @@ struct MainView: View {
         }
     }
 
-    // MARK: - 遮罩：成就提示 / 死亡
+    // MARK: - 提示浮层
 
     private func toastOverlay(_ text: String) -> some View {
         VStack {
@@ -439,19 +455,6 @@ struct MainView: View {
             HousesView(store: store)
         case .settlement:
             SettlementView(store: store)
-        }
-    }
-}
-
-// MARK: - 统一提示框
-
-extension View {
-    func storeAlert(_ store: GameStore) -> some View {
-        self.alert(store.alert ?? "", isPresented: Binding(
-            get: { store.alert != nil },
-            set: { if !$0 { store.alert = nil } }
-        )) {
-            Button("确定", role: .cancel) {}
         }
     }
 }

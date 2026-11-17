@@ -31,7 +31,9 @@ struct SheetHeader: View {
 struct SaleOfficeView: View {
     @ObservedObject var store: GameStore
     @Environment(\.dismiss) private var dismiss
-    @State private var pending: GameData.BuildingDef?
+
+    @State private var confirming: GameData.BuildingDef?
+    @State private var error: String?
 
     private let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
 
@@ -49,9 +51,12 @@ struct SaleOfficeView: View {
                     .padding(Layout.hPad)
                 }
             }
+
+            if let b = confirming {
+                confirmOverlay(b)
+            }
         }
         .preferredColorScheme(.light)
-        .storeAlert(store)
     }
 
     private func card(_ b: GameData.BuildingDef) -> some View {
@@ -90,22 +95,56 @@ struct SaleOfficeView: View {
                             primary: !owned,
                             enabled: !owned,
                             height: 30) {
-                    pending = b
+                    error = nil
+                    confirming = b
                 }
             }
             .frame(height: 214)
         }
-        .alert("确定购买 \(b.name)？", isPresented: Binding(
-            get: { pending?.name == b.name },
-            set: { if !$0 { pending = nil } }
-        )) {
-            Button("取消", role: .cancel) { pending = nil }
-            Button("确定") {
-                if let p = pending { store.buyBuilding(p) }
-                pending = nil
+    }
+
+    private func confirmOverlay(_ b: GameData.BuildingDef) -> some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    confirming = nil
+                    error = nil
+                }
+
+            PixelPanel(title: "购买确认") {
+                VStack(spacing: 10) {
+                    Text("\(b.name) · \(b.area)m²")
+                        .font(Theme.pixel(12))
+                        .foregroundColor(Theme.ink)
+                    Text("\(b.priceWan) 万 · 声望 +\(GameData.buildingHopeGain)")
+                        .font(Theme.pixel(12))
+                        .foregroundColor(Theme.sub)
+                    if let error {
+                        Text(error)
+                            .font(Theme.pixel(12))
+                            .foregroundColor(Theme.red)
+                    }
+                    HStack(spacing: 8) {
+                        PixelButton(title: "取消") {
+                            confirming = nil
+                            error = nil
+                        }
+                        PixelButton(title: "确定", primary: true) {
+                            if store.buyBuilding(b) {
+                                confirming = nil
+                                error = nil
+                            } else {
+                                error = store.alert
+                                store.alert = nil
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
-        } message: {
-            Text("\(b.priceWan) 万，声望 +\(GameData.buildingHopeGain)")
+            .frame(maxWidth: 280)
+            .padding(24)
         }
     }
 }
@@ -263,19 +302,18 @@ struct HousesView: View {
     }
 }
 
-// MARK: - 结算
+// MARK: - 结算（只看本局）
 
 struct SettlementView: View {
     @ObservedObject var store: GameStore
     @Environment(\.dismiss) private var dismiss
 
     private var data: Settlement {
-        store.settlement ?? Settlement(weeks: store.state.week,
-                                       achievements: store.satisfiedAchievements().count,
-                                       totalAchievements: GameData.achievements.count,
-                                       houses: store.state.buildingHouse.count,
-                                       netWorth: store.state.money + store.state.cash + store.state.alimoney,
-                                       milestoneTotal: Progress.shared.totalMilestones)
+        if let s = store.settlement { return s }
+        return Settlement(weeks: store.state.week,
+                          netWorth: store.state.money + store.state.cash + store.state.alimoney,
+                          achievements: store.satisfiedAchievements().map { GameData.achievementDesc($0) },
+                          houses: store.state.buildingHouse)
     }
 
     var body: some View {
@@ -289,16 +327,43 @@ struct SettlementView: View {
                             VStack(spacing: 8) {
                                 row("生存", "\(data.weeks) 周")
                                 row("净资产", Money.text(data.netWorth))
-                                row("房产", "\(data.houses) 套")
-                                row("达成成就", "\(data.achievements)/\(data.totalAchievements)")
                             }
                         }
-                        PixelPanel(title: "累计（全部存档）") {
-                            VStack(spacing: 8) {
-                                row("已解锁成就", "\(Progress.shared.unlockedCount)/\(GameData.achievements.count)")
-                                row("房产购买次数", "\(data.milestoneTotal)")
+
+                        if !data.houses.isEmpty {
+                            PixelPanel(title: "房产 \(data.houses.count)") {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(data.houses, id: \.self) { name in
+                                        HStack(spacing: 6) {
+                                            Rectangle().fill(Theme.sub).frame(width: 4, height: 4)
+                                            Text(name)
+                                                .font(Theme.pixel(12))
+                                                .foregroundColor(Theme.ink)
+                                            Spacer(minLength: 0)
+                                        }
+                                    }
+                                }
                             }
                         }
+
+                        if !data.achievements.isEmpty {
+                            PixelPanel(title: "成就 \(data.achievements.count)") {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(data.achievements, id: \.self) { desc in
+                                        HStack(spacing: 6) {
+                                            Rectangle().fill(Theme.sub).frame(width: 4, height: 4)
+                                            Text(desc)
+                                                .font(Theme.pixel(12))
+                                                .foregroundColor(Theme.ink)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.8)
+                                            Spacer(minLength: 0)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         HStack(spacing: 8) {
                             PixelButton(title: "返回") { dismiss() }
                             PixelButton(title: "重新开始", primary: true) {
@@ -352,8 +417,8 @@ struct ConfirmDialog: View {
                         PixelButton(title: "取消") { onClose() }
                         PixelButton(title: "确定", primary: true) {
                             onConfirm()
-                            result = store.alert
-                            store.alert = nil
+                            result = store.lastResult
+                            store.lastResult = nil
                         }
                     }
                 } else {
@@ -480,16 +545,13 @@ struct LotteryDialog: View {
                 HStack(spacing: 8) {
                     PixelButton(title: "关闭") { onClose() }
                     PixelButton(title: "下注", primary: true) {
-                        let ok = store.lotteryBet(amount: Int(amount) ?? 0, kind: kind)
-                        let result = store.alert
-                        store.alert = nil
-                        if ok {
+                        if store.lotteryBet(amount: Int(amount) ?? 0, kind: kind) {
                             amount = ""
-                            if let prize = store.lastLottery {
-                                message = "开彩：\(prize) · \(result ?? "")"
-                            }
+                            message = store.lastResult
+                            store.lastResult = nil
                         } else {
-                            message = result
+                            message = store.alert
+                            store.alert = nil
                         }
                     }
                 }

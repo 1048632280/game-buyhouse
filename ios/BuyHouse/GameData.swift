@@ -22,6 +22,8 @@ enum GameData {
     static let marketCount = 3
     /// 每个市场最多挂 5 种货（从 8 种里随机）
     static let marketSlots = 5
+    /// 出租屋最多存放 5 种货
+    static let roomSlots = 5
 
     // MARK: - 货物（cargo.py）
     struct CargoDef {
