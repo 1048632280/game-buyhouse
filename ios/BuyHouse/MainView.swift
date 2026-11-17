@@ -245,7 +245,6 @@ struct MainView: View {
                         DottedLine()
                     }
                 }
-                Spacer(minLength: 0)
             }
         }
     }
@@ -282,7 +281,6 @@ struct MainView: View {
                         DottedLine()
                     }
                 }
-                Spacer(minLength: 0)
             }
             .disabled(store.hasPendingEvents)
         }
