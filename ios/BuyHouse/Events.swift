@@ -5,14 +5,14 @@ import Foundation
 enum EventCategory: String, CaseIterable {
     case money, market, reputation, weather, health
 
-    /// 抽取时的类别权重
+    /// 抽取时的类别权重（行情类明显高于其他）
     var weight: Int {
         switch self {
-        case .money: return 30
-        case .market: return 22
-        case .reputation: return 18
-        case .weather: return 15
-        case .health: return 15
+        case .market: return 50
+        case .money: return 18
+        case .reputation: return 12
+        case .weather: return 10
+        case .health: return 10
         }
     }
 
