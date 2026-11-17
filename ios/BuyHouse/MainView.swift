@@ -171,19 +171,16 @@ struct MainView: View {
     private var tradeRow: some View {
         HStack(alignment: .top, spacing: 8) {
             roomPanel
-                .frame(maxHeight: .infinity)
             marketPanel
-                .frame(maxHeight: .infinity)
                 .overlay(alignment: .top) {
                     if store.hasPendingEvents {
                         eventOverlay
                     }
                 }
         }
-        .frame(minHeight: 200, maxHeight: .infinity)
     }
 
-    /// 报纸叠在市场栏上，一张一张点掉
+    /// 报纸叠在市场栏上，一张一张点掉（不加背景，不遮住下面的行情）
     private var eventOverlay: some View {
         ZStack(alignment: .top) {
             if store.pendingEvents.count > 1 {
@@ -208,8 +205,7 @@ struct MainView: View {
         }
         .padding(.horizontal, 6)
         .padding(.top, 6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Theme.paper)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private var roomPanel: some View {
@@ -287,6 +283,7 @@ struct MainView: View {
                 }
                 Spacer(minLength: 0)
             }
+            .disabled(store.hasPendingEvents)
         }
     }
 
