@@ -174,7 +174,7 @@ struct MainView: View {
             roomPanel
                 .frame(height: Layout.tradeHeight)
             marketPanel
-                .frame(width: Layout.marketColumnWidth, height: Layout.tradeHeight)
+                .frame(height: Layout.tradeHeight)
         }
     }
 
@@ -196,7 +196,7 @@ struct MainView: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
                             Spacer(minLength: 2)
-                            Text("买入\(item.priceBuy)")
+                            Text("\(item.priceBuy)")
                                 .font(Theme.pixel(12))
                                 .foregroundColor(Theme.sub)
                                 .lineLimit(1)

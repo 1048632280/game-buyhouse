@@ -26,7 +26,4 @@ enum Layout {
 
     /// 出租屋 / 市场两栏固定高度：正好装下 5 行货
     static var tradeHeight: CGFloat { 248 }
-
-    /// 市场栏宽度（窄一些，把空间留给出租屋的“买入价”）
-    static var marketColumnWidth: CGFloat { isCompact ? 146 : 158 }
 }
