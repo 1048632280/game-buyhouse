@@ -76,7 +76,7 @@ struct PixelPanel<Content: View>: View {
             .padding(.horizontal, 10)
             .padding(.top, title == nil ? 10 : 20)
             .padding(.bottom, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Theme.paper)
             .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
             .overlay(

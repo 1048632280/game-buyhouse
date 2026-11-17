@@ -38,17 +38,16 @@ struct MainView: View {
             VStack(spacing: 0) {
                 statusBar
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 10) {
-                        personPanel
-                        tradeRow
-                        marketSwitchBar
-                        actionPanel
-                    }
-                    .padding(.horizontal, Layout.hPad)
-                    .padding(.top, 14)
-                    .padding(.bottom, 12)
+                VStack(spacing: 10) {
+                    personPanel
+                    tradeRow
+                    marketSwitchBar
+                    actionPanel
                 }
+                .padding(.horizontal, Layout.hPad)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
+                .frame(maxHeight: .infinity, alignment: .top)
 
                 bottomBar
             }
@@ -172,16 +171,16 @@ struct MainView: View {
     private var tradeRow: some View {
         HStack(alignment: .top, spacing: 8) {
             roomPanel
-                .frame(height: Layout.tradeHeight)
+                .frame(maxHeight: .infinity)
             marketPanel
-                .frame(height: Layout.tradeHeight)
-                .overlay {
+                .frame(maxHeight: .infinity)
+                .overlay(alignment: .top) {
                     if store.hasPendingEvents {
                         eventOverlay
                     }
                 }
-                .clipped()
         }
+        .frame(minHeight: 200, maxHeight: .infinity)
     }
 
     /// 报纸叠在市场栏上，一张一张点掉
@@ -303,13 +302,13 @@ struct MainView: View {
                     } label: {
                         Text(GameData.marketNames[i])
                             .font(Theme.pixel(12))
-                            .foregroundColor(active ? Theme.ink : Theme.sub)
+                            .foregroundColor(Theme.ink)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                             .frame(maxWidth: .infinity)
                             .frame(height: 34)
                             .background(active ? Theme.yellow : Theme.paper)
-                            .overlay(Rectangle().stroke(Theme.ink, lineWidth: 1))
+                            .overlay(Rectangle().stroke(Theme.ink, lineWidth: active ? 2 : 1))
                     }
                     .buttonStyle(.plain)
                     .disabled(active || store.hasPendingEvents)
